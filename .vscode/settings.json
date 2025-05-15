@@ -17,7 +17,10 @@
   ],
   "Lua.workspace.library": [
     "~/Library/Application Support/Code/User/globalStorage/astronachos.defold",
-    "~/Library/Application Support/Code/User/workspaceStorage/94bac486ec8e984c21ef050d21f692c4/astronachos.defold"
+    "~/Library/Application Support/Code/User/workspaceStorage/94bac486ec8e984c21ef050d21f692c4/astronachos.defold",
+    "~/Library/Application Support/Cursor/User/globalStorage/astronachos.defold",
+    "~/Library/Application Support/Cursor/User/workspaceStorage/94bac486ec8e984c21ef050d21f692c4/astronachos.defold",
+    "~/Library/Application Support/Cursor/User/workspaceStorage/199379e0cf57c98f826032d3ce59ad2e/astronachos.defold"
   ],
   "glsllint.additionalStageAssociations": {
     ".fp": "frag",
@@ -66,5 +69,8 @@
     "*.appmanifest": "yaml",
     "*.script_api": "yaml",
     "ext.manifest": "yaml"
-  }
+  },
+  "Lua.diagnostics.globals": [
+    "websocket"
+  ]
 }

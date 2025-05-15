@@ -3,8 +3,14 @@ components {
   component: "/player/player.script"
 }
 embedded_components {
-  id: "other_player_factory"
-  type: "factory"
-  data: "prototype: \"/player/other_player.go\"\n"
+  id: "label"
+  type: "label"
+  data: "size {\n"
+  "  x: 128.0\n"
+  "  y: 32.0\n"
+  "}\n"
+  "text: \"Player(Me)\"\n"
+  "font: \"/builtins/fonts/default.font\"\n"
+  "material: \"/builtins/fonts/label-df.material\"\n"
   ""
 }
