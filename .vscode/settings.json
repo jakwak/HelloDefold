@@ -12,7 +12,8 @@
   "Lua.diagnostics.libraryFiles": "Disable",
   "Lua.diagnostics.disable": [
     "lowercase-global",
-    "redefined-local"
+    "redefined-local",
+    "undefined-field"
   ],
   "Lua.workspace.library": [
     "~/Library/Application Support/Code/User/globalStorage/astronachos.defold",

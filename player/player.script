@@ -26,8 +26,15 @@ function init(self)
 			-- ...
 			print("player added", player)
 
+			if sessionId ~= room.sessionId then
+				factory.create("#other_player_factory", vmath.vector3(player.x, player.y, 0), nil, { id = sessionId })
+			end
+
 			callbacks:listen(player, "x", function (curVal, prevVal)
-					print("entity", sessionId, "changed x to", prevVal, '->', curVal)
+				print("player", sessionId, "changed x to", prevVal, '->', curVal)
+				if sessionId ~= room.sessionId then
+					msg.post(sessionId, "update_position", { x = player.x, y = player.y })
+				end
 			end)
 
 			callbacks:on_change(player, function ()
@@ -66,8 +73,6 @@ function on_input(self, action_id, action)
 		room:send("move", { x = pos.x, y = pos.y })
 	end
 
-	if pos.x ~= prev_pos.x or pos.y ~= prev_pos.y then
-		print("pos--->", pos)
-		go.set_position(pos, ".")
-	end
+	-- print("pos--->", pos)
+	go.set_position(pos, ".")
 end
