@@ -18,11 +18,3 @@ embedded_instances {
   "}\n"
   ""
 }
-embedded_instances {
-  id: "go"
-  data: "components {\n"
-  "  id: \"main\"\n"
-  "  component: \"/main/main.script\"\n"
-  "}\n"
-  ""
-}
