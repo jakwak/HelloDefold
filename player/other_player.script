@@ -32,6 +32,8 @@ function on_message(self, message_id, message, sender)
 	-- Remove this function if not needed
 	if message_id == hash("update_position") then
 		go.set_position(vmath.vector3(message.x, message.y, 0))
+	elseif message_id == hash("set_name") then
+		label.set_text("#label", message.name)
 	elseif message_id == hash("change_color") then
 		local color_index = message.color_index
 		if color_index then

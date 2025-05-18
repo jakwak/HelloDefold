@@ -52,7 +52,7 @@ function init(self)
 		on_player_removed = function(sessionId)
 			network.remove_other_player(sessionId)
 		end
-	})
+	}, username)
 end
 
 local function update_touch_movement(dt)

@@ -11,11 +11,11 @@ local function lerp(start, target, t)
     return start + (target - start) * t
 end
 
-function M.init(callbacks)
+function M.init(callbacks, username)
     -- Colyseus 서버에 연결
     client = Colyseus.Client("ws://localhost:2567")
     
-    return client:join_or_create("my_room", {}, function(err, _room)
+    return client:join_or_create("my_room", {name = username}, function(err, _room)
         if err then
             print("JOIN ERROR: " .. err)
             return
@@ -41,6 +41,14 @@ function M.init(callbacks)
                     callbacks.on_other_player_added(player, sessionId)
                 end
             end
+
+            room_callbacks:listen(player, "name", function (curVal, prevVal)
+                if sessionId ~= room.session_id then
+                    if other_players[sessionId] then
+                        msg.post(other_players[sessionId].id, "set_name", { name = curVal })
+                    end
+                end
+            end)
 
             -- 플레이어 위치 변경 감지
             room_callbacks:listen(player, "x", function (curVal, prevVal)
