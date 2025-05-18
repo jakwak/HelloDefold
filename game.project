@@ -13,7 +13,15 @@ high_dpi = 1
 input_method = HiddenInputField
 
 [html5]
-scale_mode = stretch
+scale_mode = fit
+show_fullscreen_button = 1
+show_made_with_defold = 0
+cssfile = /custom/web/style.css
+htmlfile = /builtins/manifests/web/engine_template.html
+heap_size = 256
+wasm_streaming = 0
+external_communication = true
+include_dev_tool = 1
 
 [project]
 title = HelloDefold

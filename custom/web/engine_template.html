@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{{project.title}}</title>
+    <style>
+        /* 인라인 스타일로 기본 설정 */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            overflow: hidden;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        canvas {
+            object-fit: contain;
+            max-width: 100%;
+            max-height: 100%;
+        }
+        #fullscreen-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: 1px solid white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        #fullscreen-button:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+    </style>
+    {{#DEFOLD_CUSTOM_CSS_INLINE}}
+    <style>{{{DEFOLD_CUSTOM_CSS_INLINE}}}</style>
+    {{/DEFOLD_CUSTOM_CSS_INLINE}}
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="canvas" tabindex="1" oncontextmenu="return false;"></canvas>
+        <button id="fullscreen-button">전체화면</button>
+    </div>
+    <script type='text/javascript'>
+        // 전체화면 전환 함수
+        function toggleFullScreen() {
+            var container = document.getElementById('canvas-container');
+            if (!document.fullscreenElement && !document.mozFullScreenElement &&
+                !document.webkitFullscreenElement && !document.msFullscreenElement) {
+                if (container.requestFullscreen) {
+                    container.requestFullscreen();
+                } else if (container.msRequestFullscreen) {
+                    container.msRequestFullscreen();
+                } else if (container.mozRequestFullScreen) {
+                    container.mozRequestFullScreen();
+                } else if (container.webkitRequestFullscreen) {
+                    container.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+            }
+        }
+
+        // 전체화면 버튼 이벤트 리스너
+        document.getElementById('fullscreen-button').addEventListener('click', toggleFullScreen);
+
+        // 화면 크기가 변경될 때마다 캔버스 크기 조정
+        function resizeCanvas() {
+            var canvas = document.getElementById('canvas');
+            var container = document.getElementById('canvas-container');
+            var containerWidth = container.clientWidth;
+            var containerHeight = container.clientHeight;
+            
+            // 원본 비율 계산 (960:640 = 1.5)
+            var originalRatio = 960 / 640;
+            var containerRatio = containerWidth / containerHeight;
+            
+            if (containerRatio > originalRatio) {
+                // 높이에 맞추기
+                canvas.style.height = containerHeight + 'px';
+                canvas.style.width = (containerHeight * originalRatio) + 'px';
+            } else {
+                // 너비에 맞추기
+                canvas.style.width = containerWidth + 'px';
+                canvas.style.height = (containerWidth / originalRatio) + 'px';
+            }
+        }
+
+        // 전체화면 변경 이벤트 리스너
+        document.addEventListener('fullscreenchange', resizeCanvas);
+        document.addEventListener('webkitfullscreenchange', resizeCanvas);
+        document.addEventListener('mozfullscreenchange', resizeCanvas);
+        document.addEventListener('MSFullscreenChange', resizeCanvas);
+
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('load', resizeCanvas);
+
+        // 페이지 로드 시 자동으로 전체화면 전환
+        window.addEventListener('load', function() {
+            setTimeout(toggleFullScreen, 1000); // 1초 후 전체화면 전환
+        });
+    </script>
+    {{{DEFOLD_DEV_HEAD}}}
+    <script id='engine-loader' type='text/javascript' src="dmloader.js"></script>
+    {{{DEFOLD_ENGINE_SCRIPTS}}}
+</body>
+</html> 

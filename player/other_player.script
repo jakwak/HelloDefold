@@ -1,7 +1,8 @@
+local colors_module = require "player.colors"
+
 function init(self)
-	-- Add initialization code here
-	-- Learn more: https://defold.com/manuals/script/
-	-- Remove this function if not needed
+	-- 기본 색상을 흰색으로 설정
+	go.set("#sprite", "tint", colors_module.colors[1])
 end
 
 function final(self)
@@ -31,6 +32,20 @@ function on_message(self, message_id, message, sender)
 	-- Remove this function if not needed
 	if message_id == hash("update_position") then
 		go.set_position(vmath.vector3(message.x, message.y, 0))
+	elseif message_id == hash("change_color") then
+		local color_index = message.color_index
+		if color_index then
+			-- 색상 인덱스가 유효한지 확인
+			if color_index >= 1 and color_index <= #colors_module.colors then
+				go.set("#sprite", "tint", colors_module.colors[color_index])
+			else
+				print("Warning: Invalid color index received: " .. tostring(color_index))
+				-- 유효하지 않은 색상 인덱스일 경우 기본 색상(흰색)으로 설정
+				go.set("#sprite", "tint", colors_module.colors[1])
+			end
+		else
+			print("Warning: No color index received in change_color message")
+		end
 	end
 end
 

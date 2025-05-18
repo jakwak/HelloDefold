@@ -1,199 +1,109 @@
-local Colyseus = require "colyseus.sdk"
+local network = require "player.network"
+local colors_module = require "player.colors"
+local utils = require "player.utils"
 
-local client = nil
-local room = nil
-local speed = 1000
+-- 화면 경계 설정
+local screen_width = tonumber(sys.get_config("display.width"))
+local screen_height = tonumber(sys.get_config("display.height"))
+local player_size = 32
+local half_player_size = player_size * 0.5
+local bounds = {
+	left = half_player_size,
+	right = screen_width - half_player_size,
+	bottom = half_player_size,
+	top = screen_height - half_player_size
+}
+
+-- 현재 상태 변수
 local pos = vmath.vector3()
-local other_players = {}  -- 다른 플레이어들의 정보를 저장할 테이블
-
--- 목표 위치와 이동 관련 변수 추가
 local target_pos = nil
-local move_threshold = 5  -- 목표 지점과의 최소 거리 (이 거리 이내면 도착한 것으로 간주)
-local interpolation_speed = 10  -- 보간 속도 (높을수록 빠르게 목표 위치로 이동)
-
--- 선형 보간 함수
-local function lerp(start, target, t)
-	return start + (target - start) * t
-end
+local move_threshold = 10
+local is_dragging = false
+local move_speed = 500
+local username = "unknown"  -- 기본 사용자 이름
 
 function init(self)
+	math.randomseed(os.time()) -- 랜덤 시드 초기화
+
+	local params = utils.get_query_parameters()
+	if params.username then
+		username = utils.format_username(params.username)
+		label.set_text("#label", username)
+	end
+
 	msg.post(".", "acquire_input_focus")
-	pos = go.get_position()  -- 현재 위치 저장
+	pos = go.get_position()
 
-	-- Colyseus 서버에 연결
-	client = Colyseus.Client("ws://localhost:2567")
-
-	-- 게임 룸 참가
-	client:join_or_create("my_room", {}, function(err, _room)
-		if err then
-			print("JOIN ERROR: " .. err)
-			return
+	-- 네트워크 초기화 및 콜백 설정
+	network.init({
+		on_my_player_added = function(player)
+			pos.x = player.x
+			pos.y = player.y
+			go.set_position(pos, ".")
+			-- 서버에서 할당받은 색상 적용
+			if player.color and player.color >= 1 and player.color <= #colors_module.colors then
+				go.set("#sprite", "tint", colors_module.colors[player.color])
+			end
+		end,
+		on_other_player_added = function(player, sessionId)
+			local other_player = factory.create("/players#factory", vmath.vector3(player.x, player.y, 0), nil, { id = sessionId })
+			network.add_other_player(sessionId, other_player)
+		end,
+		on_player_removed = function(sessionId)
+			network.remove_other_player(sessionId)
 		end
-
-		room = _room
-		print("Room connected. Full room object:")
-		print("My session_id:", room.session_id)
-		
-		Callbacks = Colyseus.callbacks(room)
-
-		-- 새로운 플레이어가 참가했을 때
-		Callbacks:on_add("players", function (player, sessionId)
-			print("player added", player, "sessionId:", sessionId, "my session_id:", room.session_id)
-
-			if not sessionId then
-				print("Warning: sessionId is nil!")
-				return
-			end
-
-			if sessionId == room.session_id then
-				-- 자신의 초기 위치 설정
-				pos.x = player.x
-				pos.y = player.y
-				go.set_position(pos, ".")
-				print("Set my position:", pos)
-			else
-				-- 다른 플레이어 생성 및 정보 저장
-				if not other_players[sessionId] then  -- 중복 생성 방지
-					local other_player = factory.create("/players#factory", vmath.vector3(player.x, player.y, 0), nil, { id = sessionId })
-					other_players[sessionId] = {
-						id = other_player,
-						position = vmath.vector3(player.x, player.y, 0),
-						target_position = vmath.vector3(player.x, player.y, 0)  -- 목표 위치 추가
-					}
-					print("Created other player:", sessionId)
-				end
-			end
-
-			-- 플레이어 위치 변경 감지
-			Callbacks:listen(player, "x", function (curVal, prevVal)
-				if sessionId ~= room.session_id then
-					if other_players[sessionId] then
-						other_players[sessionId].target_position.x = curVal  -- 목표 위치 업데이트
-					end
-				end
-			end)
-
-			Callbacks:listen(player, "y", function (curVal, prevVal)
-				if sessionId ~= room.session_id then
-					if other_players[sessionId] then
-						other_players[sessionId].target_position.y = curVal  -- 목표 위치 업데이트
-					end
-				end
-			end)
-		end)
-
-		-- 플레이어가 나갔을 때
-		Callbacks:on_remove("players", function (player, sessionId)
-			print("Player removal triggered for sessionId: " .. tostring(sessionId))
-			if other_players[sessionId] then
-				print("Found player to remove, instance id: " .. tostring(other_players[sessionId].id))
-				-- 게임 오브젝트 삭제
-				go.delete(other_players[sessionId].id)
-				-- 테이블에서 플레이어 정보 제거
-				other_players[sessionId] = nil
-				print("Player cleanup completed for sessionId: " .. tostring(sessionId))
-			else
-				print("Warning: No player found for sessionId: " .. tostring(sessionId))
-			end
-		end)
-	end)
+	})
 end
 
-function update(self, dt)
-	-- 자신의 이동 업데이트
+local function update_touch_movement(dt)
 	if target_pos then
-		-- 현재 위치와 목표 위치 간의 거리 계산
-		local distance = vmath.length(target_pos - pos)
+		target_pos = utils.clamp_position(target_pos, bounds)
+		local to_target = target_pos - pos
+		local distance = vmath.length(to_target)
 		
 		if distance > move_threshold then
-			-- 이동 방향 계산
-			local direction = vmath.normalize(target_pos - pos)
-			-- 새로운 위치 계산
-			local move_distance = math.min(speed * dt, distance)  -- 남은 거리와 이동 거리 중 작은 값 선택
-			pos = pos + direction * move_distance
+			local move_dir = vmath.normalize(to_target)
+			local movement = move_dir * move_speed * dt
 			
-			-- 위치 업데이트
-			go.set_position(pos, ".")
-			
-			-- 서버에 위치 전송
-			if room then
-				room:send("move", { x = pos.x, y = pos.y })
+			if vmath.length(movement) > distance then
+				pos = target_pos
+			else
+				local new_pos = pos + movement
+				pos = utils.clamp_position(new_pos, bounds)
 			end
+			
+			go.set_position(pos, ".")
+			network.send_position(pos.x, pos.y)
+			return true
 		else
-			-- 정확히 목표 지점으로 설정하고 이동 중지
 			pos = target_pos
 			go.set_position(pos, ".")
-			if room then
-				room:send("move", { x = pos.x, y = pos.y })
-			end
+			network.send_position(pos.x, pos.y)
 			target_pos = nil
 		end
 	end
+	return false
+end
 
-	-- 다른 플레이어들의 위치 보간 업데이트
-	for sessionId, player_data in pairs(other_players) do
-		local current_pos = player_data.position
-		local target_pos = player_data.target_position
-		
-		-- 현재 위치와 목표 위치가 다르면 보간 적용
-		if vmath.length(target_pos - current_pos) > 0.1 then
-			-- 선형 보간 적용
-			player_data.position = vmath.vector3(
-				lerp(current_pos.x, target_pos.x, dt * interpolation_speed),
-				lerp(current_pos.y, target_pos.y, dt * interpolation_speed),
-				0
-			)
-			-- 게임 오브젝트 위치 업데이트
-			go.set_position(player_data.position, player_data.id)
-		end
-	end
+function update(self, dt)
+	update_touch_movement(dt)
+	network.update(dt)
 end
 
 function on_input(self, action_id, action)
-	if not room then return end
-	
-	local moved = false
-	local dt = action.delta or (1/60)  -- delta가 없는 경우 기본값 사용
-
-	if action_id == hash("touch") and action.pressed then
-		-- 터치/클릭 위치를 목표 지점으로 설정
-		target_pos = vmath.vector3(action.x, action.y, 0)
-		return
-	end
-
-	-- 기존 키보드 입력 처리
-	if action_id == hash("up") and action.pressed then
-		pos.y = pos.y + speed * dt
-		moved = true
-	elseif action_id == hash("down") and action.pressed then
-		pos.y = pos.y - speed * dt
-		moved = true
-	elseif action_id == hash("left") and action.pressed then
-		pos.x = pos.x - speed * dt
-		moved = true
-	elseif action_id == hash("right") and action.pressed then
-		pos.x = pos.x + speed * dt
-		moved = true
-	end
-
-	if moved then
-		target_pos = nil  -- 키보드 입력이 있으면 목표 지점 초기화
-		go.set_position(pos, ".")
-		room:send("move", { x = pos.x, y = pos.y })
+	if action_id == hash("touch") then
+		if action.pressed then
+			is_dragging = true
+			target_pos = vmath.vector3(action.x, action.y, 0)
+		elseif action.released then
+			is_dragging = false
+		elseif is_dragging then
+			target_pos = vmath.vector3(action.x, action.y, 0)
+		end
+		return true
 	end
 end
 
 function final(self)
-	-- 모든 다른 플레이어 정리
-	for sessionId, player_data in pairs(other_players) do
-		print("Cleaning up player: " .. tostring(sessionId))
-		if player_data.id then
-			go.delete(player_data.id)
-		end
-		other_players[sessionId] = nil
-	end
-
-	if room then
-		room:leave()
-	end
+	network.final()
 end
