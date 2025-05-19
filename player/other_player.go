@@ -13,8 +13,8 @@ embedded_components {
   "}\n"
   ""
   scale {
-    x: 3.0
-    y: 3.0
+    x: 2.0
+    y: 2.0
   }
 }
 embedded_components {
@@ -24,15 +24,15 @@ embedded_components {
   "  x: 128.0\n"
   "  y: 32.0\n"
   "}\n"
-  "color {\n"
-  "  y: 0.0\n"
-  "  z: 0.0\n"
-  "}\n"
-  "text: \"\\353\\213\\244\\353\\245\\270 \\354\\202\\254\\354\\232\\251\\354\\236\\220 \"\n"
+  "text: \"Guest\"\n"
   "font: \"/assets/fonts/korean.font\"\n"
   "material: \"/builtins/fonts/label-df.material\"\n"
   ""
   position {
-    y: 40.0
+    y: 24.0
+  }
+  scale {
+    x: 0.5
+    y: 0.5
   }
 }

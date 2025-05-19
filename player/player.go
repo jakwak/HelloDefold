@@ -13,8 +13,8 @@ embedded_components {
   "}\n"
   ""
   scale {
-    x: 3.0
-    y: 3.0
+    x: 2.0
+    y: 2.0
   }
 }
 embedded_components {
@@ -24,11 +24,18 @@ embedded_components {
   "  x: 128.0\n"
   "  y: 32.0\n"
   "}\n"
-  "text: \"Player\"\n"
+  "blend_mode: BLEND_MODE_SCREEN\n"
+  "text: \"player\\n"
+  "\"\n"
+  "  \"\"\n"
   "font: \"/assets/fonts/korean.font\"\n"
   "material: \"/builtins/fonts/label-df.material\"\n"
   ""
   position {
-    y: 40.0
+    y: 24.0
+  }
+  scale {
+    x: 0.5
+    y: 0.5
   }
 }

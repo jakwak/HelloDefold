@@ -46,8 +46,11 @@ function init(self)
 			end
 		end,
 		on_other_player_added = function(player, sessionId)
-			local other_player = factory.create("/players#factory", vmath.vector3(player.x, player.y, 0), nil, { id = sessionId })
-			network.add_other_player(sessionId, other_player)
+			if player.name ~= "Guest" then
+				print("player.name===> ", player.name)
+				local other_player = factory.create("/players#factory", vmath.vector3(player.x, player.y, 0), nil, { id = sessionId })
+				network.add_other_player(sessionId, other_player)
+			end
 		end,
 		on_player_removed = function(sessionId)
 			network.remove_other_player(sessionId)
