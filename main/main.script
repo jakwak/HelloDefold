@@ -18,7 +18,7 @@ local function websocket_callback(self, conn, data)
 		if data.handshake_response then
 			print("Handshake response status: '" .. tostring(data.handshake_response.status) .. "'")
 			for key, value in pairs(data.handshake_response.headers) do
-				log("Handshake response header: '" .. key .. ": " .. value .. "'")
+				print("Handshake response header: '" .. key .. ": " .. value .. "'")
 			end
 			print("Handshake response body: '" .. tostring(data.handshake_response.response) .. "'")
 		end

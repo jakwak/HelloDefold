@@ -32,3 +32,6 @@ dependencies#1 = https://github.com/colyseus/colyseus-defold/archive/master.zip
 debug = 0
 socket_timeout = 10000000
 
+[physics]
+gravity_y = 0.0
+
