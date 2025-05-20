@@ -4,78 +4,87 @@ local colyseus = require "colyseus.sdk"
 local client = nil
 local room = nil
 local move_vector = { x = 0, y = 0 }
+local keys = {
+  [hash("up")] = { axis = "y", value = 1 },
+  [hash("down")] = { axis = "y", value = -1 },
+  [hash("left")] = { axis = "x", value = -1 },
+  [hash("right")] = { axis = "x", value = 1 }
+}
 
 function init(self)
   msg.post(".", "acquire_input_focus")
 
-  client = colyseus.Client("ws://localhost:2567")   -- 서버 주소
-  
-  -- 0.16 버전에서는 join_or_create 대신 joinOrCreate 사용
-  client:join_or_create("my_room", {}, function(err, _room)
+  client = colyseus.Client("ws://localhost:2567") -- 서버 주소
+
+  client:join_or_create("matter_room", {}, function(err, _room)
     if err then
       print("Join error:", err)
       return
     end
     room = _room
-    print("Joined room:", room.sessionId)
+    print("Joined room:", room.session_id)
 
-    -- 0.16 버전에서 변경된 이벤트 리스닝 방식
-    room:onStateChange(function(state)
-      -- 상태 변경 시 호출
-      print("State has been updated!")
-    end)
-
-    -- players 스키마에 대한 이벤트 리스닝
-    room:onMessage("players", function(message)
-      print("Received message about players:", message)
-    end)
+    local room_callbacks = colyseus.callbacks(room)
 
     -- 플레이어 추가 이벤트
-    room.state.players:onAdd(function(player, sessionId)
+    room_callbacks:on_add("players", function(player, sessionId)
       print("New player joined:", sessionId)
-      if sessionId == room.sessionId then
+      if sessionId == room.session_id then
         self.my_id = sessionId
         self.player = player
       end
 
-      -- 플레이어 변경 이벤트
-      player:onChange(function(changes)
-        -- 위치가 바뀔 때마다 메시지 전송
-        if sessionId == room.sessionId then
-          msg.post("#player", "update_position", { x = player.x, y = player.y })
+      -- 플레이어 위치 변경 감지
+      room_callbacks:listen(player, "x", function(curVal, prevVal)
+        if sessionId == room.session_id then
+          msg.post("#player2", "update_position", { x = curVal, y = player.y })
+        end
+      end)
+
+      room_callbacks:listen(player, "y", function(curVal, prevVal)
+        if sessionId == room.session_id then
+          msg.post("#player2", "update_position", { x = player.x, y = curVal })
         end
       end)
     end)
 
     -- 플레이어 제거 이벤트
-    room.state.players:onRemove(function(player, sessionId)
+    room_callbacks:on_remove("players", function(player, sessionId)
       print("Player left:", sessionId)
     end)
   end)
 end
 
 function update(self, dt)
-  if room then
-    -- 0.16 버전에서는 client:run() 대신 room:processMessageQueue() 사용
-    room:processMessageQueue()
-    
-    -- 키 입력을 계속 보내는 구조
-    if move_vector.x ~= 0 or move_vector.y ~= 0 then
-      room:send("move", move_vector)
-    end
+  if room and (move_vector.x ~= 0 or move_vector.y ~= 0) then
+    room:send("move", move_vector)
   end
 end
 
 function on_input(self, action_id, action)
-  move_vector = { x = 0, y = 0 }
+  if keys[action_id] then
+    local key = keys[action_id]
+    if action.pressed then
+      move_vector[key.axis] = key.value
+    elseif action.released then
+      -- 다른 키가 눌려있는지 확인
+      local other_key_pressed = false
+      for k, v in pairs(keys) do
+        if v.axis == key.axis and k ~= action_id and msg.post(".", "is_pressed", { key = k }) then
+          other_key_pressed = true
+          break
+        end
+      end
+      if not other_key_pressed then
+        move_vector[key.axis] = 0
+      end
+    end
+  end
 
-  if action_id == hash("arrow_up") and action.pressed then
-    move_vector.y = -1
-  elseif action_id == hash("arrow_down") and action.pressed then
-    move_vector.y = 1
-  elseif action_id == hash("arrow_left") and action.pressed then
-    move_vector.x = -1
-  elseif action_id == hash("arrow_right") and action.pressed then
-    move_vector.x = 1
+  -- 대각선 이동을 위한 벡터 정규화
+  if move_vector.x ~= 0 and move_vector.y ~= 0 then
+    local length = math.sqrt(move_vector.x * move_vector.x + move_vector.y * move_vector.y)
+    move_vector.x = move_vector.x / length
+    move_vector.y = move_vector.y / length
   end
 end

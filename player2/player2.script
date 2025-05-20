@@ -1,21 +1,26 @@
-go.property("player_id", "")
+go.property("player_id", hash(""))
+go.property("lerp_speed", 0.2) -- 보간 속도 조절용 프로퍼티
 
 function init(self)
   msg.post(".", "acquire_input_focus")
+  self.target_pos = go.get_position()
 end
 
 function update(self, dt)
-  -- 서버에서 받은 위치를 이곳에서 반영
+  -- 현재 위치와 목표 위치 사이를 부드럽게 보간
   if self.target_pos then
-      local pos = go.get_position()
-      pos.x = self.target_pos.x
-      pos.y = self.target_pos.y
-      go.set_position(pos)
+    local current_pos = go.get_position()
+    local new_pos = vmath.vector3(
+      current_pos.x + (self.target_pos.x - current_pos.x) * self.lerp_speed,
+      current_pos.y + (self.target_pos.y - current_pos.y) * self.lerp_speed,
+      current_pos.z
+    )
+    go.set_position(new_pos)
   end
 end
 
 function on_message(self, message_id, message, sender)
   if message_id == hash("update_position") then
-      self.target_pos = vmath.vector3(message.x, message.y, 0)
+    self.target_pos = vmath.vector3(message.x, message.y, 0)
   end
 end
