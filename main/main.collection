@@ -7,6 +7,10 @@ instances {
     y: 30.0
   }
 }
+instances {
+  id: "player2"
+  prototype: "/player2/player2.go"
+}
 scale_along_z: 0
 embedded_instances {
   id: "players"

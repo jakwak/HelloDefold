@@ -44,7 +44,7 @@ embedded_components {
   type: "collisionobject"
   data: "type: COLLISION_OBJECT_TYPE_DYNAMIC\n"
   "mass: 1.0\n"
-  "friction: 0.1\n"
+  "friction: 0.5\n"
   "restitution: 0.9\n"
   "group: \"player\"\n"
   "mask: \"enemy\"\n"
@@ -61,7 +61,7 @@ embedded_components {
   "  }\n"
   "  data: 10.0\n"
   "}\n"
-  "linear_damping: 0.7\n"
+  "linear_damping: 0.9\n"
   "locked_rotation: true\n"
   ""
 }
