@@ -1,0 +1,19 @@
+tile_set: "/assets/circle/circle.png"
+material: "/builtins/materials/sprite.material"
+blend_mode: BLEND_MODE_ALPHA
+extrude_borders: 1
+inner_padding: 1
+outer_padding: 1
+animations: [
+  {
+    id: "default"
+    width: 40
+    height: 40
+    frame_start: 1
+    frame_end: 1
+    playback: PLAYBACK_NONE
+    fps: 1
+    flip_horizontal: 0
+    flip_vertical: 0
+  }
+] 

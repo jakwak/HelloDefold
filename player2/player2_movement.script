@@ -1,0 +1,30 @@
+-- 움직임 관련 로직
+go.property("lerp_speed", 0.2) -- 보간 속도 조절용 프로퍼티
+
+function init(self)
+    self.target_pos = go.get_position()
+    self.is_controllable = true
+end
+
+function update(self, dt)
+    -- 현재 위치와 목표 위치 사이를 부드럽게 보간
+    if self.target_pos then
+        local current_pos = go.get_position()
+        local new_pos = vmath.vector3(
+            current_pos.x + (self.target_pos.x - current_pos.x) * self.lerp_speed,
+            current_pos.y + (self.target_pos.y - current_pos.y) * self.lerp_speed,
+            current_pos.z
+        )
+        go.set_position(new_pos)
+    end
+end
+
+function on_message(self, message_id, message, sender)
+    if message_id == hash("update_position") then
+        self.target_pos = vmath.vector3(message.x, message.y, 0)
+        if message.is_controllable ~= nil then
+            self.is_controllable = message.is_controllable
+            print("Movement script received isControllable:", self.is_controllable)
+        end
+    end
+end 

@@ -1,0 +1,106 @@
+-- 네트워크 관련 로직
+local colyseus = require "colyseus.sdk"
+
+local client = nil
+local room = nil
+local move_vector = { x = 0, y = 0 }
+local keys = {
+    [hash("up")] = { axis = "y", value = -1 },
+    [hash("down")] = { axis = "y", value = 1 },
+    [hash("left")] = { axis = "x", value = -1 },
+    [hash("right")] = { axis = "x", value = 1 }
+}
+
+function init(self)
+    msg.post(".", "acquire_input_focus")
+    self.is_controllable = true
+    connect_to_server(self)
+end
+
+function connect_to_server(self)
+    client = colyseus.Client("ws://localhost:2567")
+    client:join_or_create("matter_room", {}, function(err, _room)
+        if err then
+            print("Join error:", err)
+            return
+        end
+        room = _room
+        print("Joined room:", room.session_id)
+        setup_room_callbacks(self)
+    end)
+end
+
+function setup_room_callbacks(self)
+    if not room then return end
+    local room_callbacks = colyseus.callbacks(room)
+    
+    room_callbacks:on_add("players", function(player, sessionId)
+        print("New player joined:", sessionId)
+        if sessionId == room.session_id then
+            self.my_id = sessionId
+            self.player = player
+        end
+        setup_player_callbacks(self, player, sessionId)
+    end)
+
+    room_callbacks:on_remove("players", function(player, sessionId)
+        print("Player left:", sessionId)
+    end)
+end
+
+function setup_player_callbacks(self, player, sessionId)
+    if not room then return end
+    local room_callbacks = colyseus.callbacks(room)
+    
+    room_callbacks:listen(player, "x", function(curVal, prevVal)
+        if sessionId == room.session_id then
+            msg.post("#player2_movement", "update_position", { x = curVal, y = player.y })
+        end
+    end)
+
+    room_callbacks:listen(player, "y", function(curVal, prevVal)
+        if sessionId == room.session_id then
+            msg.post("#player2_movement", "update_position", { x = player.x, y = curVal })
+        end
+    end)
+
+    room_callbacks:listen(player, "isControllable", function(curVal, prevVal)
+        if sessionId == room.session_id then
+            print("isControllable changed:", prevVal, "->", curVal)
+            self.is_controllable = curVal
+        end
+    end)
+end
+
+function update(self, dt)
+    if room and self.is_controllable and (move_vector.x ~= 0 or move_vector.y ~= 0) then
+        room:send("move", move_vector)
+    end
+end
+
+function on_input(self, action_id, action)
+    if keys[action_id] then
+        local key = keys[action_id]
+        if action.pressed then
+            move_vector[key.axis] = key.value
+        elseif action.released then
+            local other_key_pressed = false
+            for k, v in pairs(keys) do
+                if v.axis == key.axis and k ~= action_id and msg.post(".", "is_pressed", { key = k }) then
+                    other_key_pressed = true
+                    break
+                end
+            end
+            if not other_key_pressed then
+                move_vector[key.axis] = 0
+            end
+        end
+    end
+
+    -- 대각선 이동을 위한 벡터 정규화
+    if move_vector.x ~= 0 and move_vector.y ~= 0 then
+        local length = math.sqrt(move_vector.x * move_vector.x + move_vector.y * move_vector.y)
+        move_vector.x = move_vector.x / length
+        move_vector.y = move_vector.y / length
+    end
+end 
