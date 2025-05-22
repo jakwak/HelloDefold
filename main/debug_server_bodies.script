@@ -1,0 +1,228 @@
+-- 서버 디버그 바디 전용 스크립트
+
+-- 디버그 상태
+local debug_state = {
+    enabled = true,              -- F1로 토글
+    bodies = {},                 -- 서버에서 받은 바디 정보
+    timer = 0,                   -- 요청 타이머
+    request_interval = 0.25,     -- 요청 간격 (초)
+    network_connected = false    -- 네트워크 연결 상태
+}
+
+-- 디버그 렌더링 설정
+local DEBUG_COLOR = vmath.vector4(0, 1, 0, 0.7) -- 초록색 (RGBA)
+
+function init(self)
+    print("=== Debug Server Bodies Manager Started ===")
+    
+    -- 입력 포커스 획득 (F1 키 처리용)
+    msg.post(".", "acquire_input_focus")
+    
+    -- 네트워크 상태 확인
+    msg.post("/network#client", "get_network_state", {})
+    
+    -- 주기적으로 디버그 정보 요청
+    timer.delay(1.0, true, function()
+        if debug_state.network_connected then
+            request_debug_bodies()
+        end
+    end)
+end
+
+-- client.script로 디버그 바디 정보 요청
+function request_debug_bodies()
+    msg.post("/network#client", "request_debug_bodies", {})
+end
+
+-- 디버그 바디 렌더링
+function render_debug_bodies(self)
+    if not debug_state.enabled or #debug_state.bodies == 0 then
+        return
+    end
+    
+    for _, body in ipairs(debug_state.bodies) do
+        if body and body.shape then
+            -- 사각형 렌더링
+            if body.shape == "rectangle" and body.width and body.height then
+                draw_rectangle(body)
+            -- 원 렌더링
+            elseif body.shape == "circle" and body.radius then
+                draw_circle(body)
+            end
+            
+            -- 중심점 십자가 표시
+            draw_center_cross(body)
+        end
+    end
+end
+
+-- 사각형 그리기
+function draw_rectangle(body)
+    local half_w = body.width / 2
+    local half_h = body.height / 2
+    
+    -- 네 개의 모서리 선 그리기
+    msg.post("@render:", "draw_line", {
+        start_point = vmath.vector3(body.x - half_w, body.y - half_h, 0),
+        end_point = vmath.vector3(body.x + half_w, body.y - half_h, 0),
+        color = DEBUG_COLOR
+    })
+    msg.post("@render:", "draw_line", {
+        start_point = vmath.vector3(body.x + half_w, body.y - half_h, 0),
+        end_point = vmath.vector3(body.x + half_w, body.y + half_h, 0),
+        color = DEBUG_COLOR
+    })
+    msg.post("@render:", "draw_line", {
+        start_point = vmath.vector3(body.x + half_w, body.y + half_h, 0),
+        end_point = vmath.vector3(body.x - half_w, body.y + half_h, 0),
+        color = DEBUG_COLOR
+    })
+    msg.post("@render:", "draw_line", {
+        start_point = vmath.vector3(body.x - half_w, body.y + half_h, 0),
+        end_point = vmath.vector3(body.x - half_w, body.y - half_h, 0),
+        color = DEBUG_COLOR
+    })
+end
+
+-- 원 그리기
+function draw_circle(body)
+    local segments = 16
+    local angle_step = 2 * math.pi / segments
+    
+    for i = 0, segments - 1 do
+        local angle1 = i * angle_step
+        local angle2 = (i + 1) * angle_step
+        local x1 = body.x + body.radius * math.cos(angle1)
+        local y1 = body.y + body.radius * math.sin(angle1)
+        local x2 = body.x + body.radius * math.cos(angle2)
+        local y2 = body.y + body.radius * math.sin(angle2)
+        
+        msg.post("@render:", "draw_line", {
+            start_point = vmath.vector3(x1, y1, 0),
+            end_point = vmath.vector3(x2, y2, 0),
+            color = DEBUG_COLOR
+        })
+    end
+end
+
+-- 중심점 십자가 그리기
+function draw_center_cross(body)
+    local cross_size = 5
+    
+    msg.post("@render:", "draw_line", {
+        start_point = vmath.vector3(body.x - cross_size, body.y, 0),
+        end_point = vmath.vector3(body.x + cross_size, body.y, 0),
+        color = DEBUG_COLOR
+    })
+    msg.post("@render:", "draw_line", {
+        start_point = vmath.vector3(body.x, body.y - cross_size, 0),
+        end_point = vmath.vector3(body.x, body.y + cross_size, 0),
+        color = DEBUG_COLOR
+    })
+end
+
+function update(self, dt)
+    -- 디버그 타이머 업데이트
+    if debug_state.network_connected then
+        debug_state.timer = debug_state.timer + dt
+        if debug_state.timer >= debug_state.request_interval then
+            debug_state.timer = 0
+            request_debug_bodies()
+        end
+    end
+    
+    -- 디버그 렌더링
+    render_debug_bodies(self)
+end
+
+function on_input(self, action_id, action)
+    -- F1 키로 디버그 토글
+    if action_id == hash("f1") and action.pressed then
+        debug_state.enabled = not debug_state.enabled
+        print("서버 디버그 바디 표시:", debug_state.enabled and "ON" or "OFF")
+        return true
+    end
+end
+
+function on_message(self, message_id, message, sender)
+    if message_id == hash("network_connected") then
+        handle_network_connected(self, message)
+        
+    elseif message_id == hash("network_state_response") then
+        handle_network_state_response(self, message)
+        
+    elseif message_id == hash("debug_bodies_update") then
+        handle_debug_bodies_update(self, message)
+        
+    elseif message_id == hash("toggle_debug") then
+        -- 외부에서 디버그 토글 요청
+        debug_state.enabled = not debug_state.enabled
+        print("Debug toggled:", debug_state.enabled and "ON" or "OFF")
+        
+    elseif message_id == hash("set_debug_enabled") then
+        -- 외부에서 디버그 상태 설정
+        debug_state.enabled = message.enabled or false
+        print("Debug set to:", debug_state.enabled and "ON" or "OFF")
+        
+    elseif message_id == hash("get_debug_state") then
+        -- 디버그 상태 요청에 응답
+        msg.post(sender, "debug_state_response", {
+            enabled = debug_state.enabled,
+            bodies_count = #debug_state.bodies,
+            network_connected = debug_state.network_connected
+        })
+    end
+end
+
+-- 메시지 핸들러들
+function handle_network_connected(self, message)
+    print("Debug: Network connected! Player ID:", message.player_id)
+    debug_state.network_connected = true
+    debug_state.timer = 0  -- 즉시 요청하도록 타이머 리셋
+end
+
+function handle_network_state_response(self, message)
+    debug_state.network_connected = message.connected
+    if message.debug_bodies then
+        debug_state.bodies = message.debug_bodies
+        print("Debug bodies loaded from network state:", #debug_state.bodies)
+    end
+end
+
+function handle_debug_bodies_update(self, message)
+    if message.bodies then
+        debug_state.bodies = message.bodies
+        
+        -- 디버그 정보 로그 (선택적)
+        if debug_state.enabled then
+            print(string.format("Debug bodies updated: %d bodies received", #debug_state.bodies))
+        end
+    end
+end
+
+-- 외부에서 호출할 수 있는 API 함수들
+function get_debug_bodies()
+    return debug_state.bodies
+end
+
+function is_debug_enabled()
+    return debug_state.enabled
+end
+
+function set_debug_enabled(enabled)
+    debug_state.enabled = enabled
+end
+
+-- 디버그 정보 출력 (디버그용)
+function print_debug_info()
+    print("=== Debug Server Bodies Info ===")
+    print("Enabled:", debug_state.enabled)
+    print("Network Connected:", debug_state.network_connected)
+    print("Bodies Count:", #debug_state.bodies)
+    print("Draw Function:", debug_state.draw_function and "Initialized" or "Not Ready")
+    print("================================")
+end
+
+function final(self)
+    print("Debug Server Bodies Manager terminated")
+end

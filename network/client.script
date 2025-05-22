@@ -1,0 +1,276 @@
+-- 중앙 네트워크 클라이언트 관리자
+local colyseus_client = require "network.colyseus_client"
+local sync_manager = require "network.sync_manager"
+local connection_manager = require "network.connection_manager"
+local room_manager = require "network.room_manager"
+local message_handler = require "network.message_handler"
+
+-- Go Properties
+go.property("server_url", hash("ws://localhost:2567"))
+go.property("room_name", hash("matter_room"))
+
+-- 네트워크 상태
+local network_state = {
+    connected = false,
+    in_room = false,
+    room = nil,
+    my_player_id = nil,
+    players = {},
+    debug_bodies = {}
+}
+
+-- 클라이언트들에게 브로드캐스트할 메시지 큐
+local message_queue = {}
+
+function init(self)
+    print("=== Network Client Manager Started ===")
+    
+    -- 네트워크 모듈 초기화
+    colyseus_client.init()
+    
+    -- 동기화 콜백들 등록
+    setup_sync_callbacks(self)
+    
+    -- 서버 접속 시도
+    connect_to_server(self)
+    
+    -- 메시지 처리를 위한 타이머
+    timer.delay(0.1, true, function()
+        process_message_queue(self)
+    end)
+end
+
+function connect_to_server(self)
+    local server_url_str = tostring(self.server_url)
+    local room_name_str = tostring(self.room_name)
+    
+    print("Connecting to server:", server_url_str, "Room:", room_name_str)
+    
+    colyseus_client.connect_and_join(
+        server_url_str,
+        room_name_str,
+        {}, -- 옵션
+        function(room)
+            on_room_joined(self, room)
+        end,
+        function(error)
+            on_connection_error(self, error)
+        end
+    )
+end
+
+function on_room_joined(self, room)
+    print("Successfully joined room:", room.session_id)
+    
+    network_state.connected = true
+    network_state.in_room = true
+    network_state.room = room
+    network_state.my_player_id = room.session_id
+    
+    -- 룸 상태 변경 감지
+    message_handler.on_state_change(function(state)
+        on_state_change(self, state)
+    end)
+    
+    -- 메시지 핸들러들 등록
+    setup_message_handlers(self, room)
+    
+    -- 다른 스크립트들에게 접속 완료 알림
+    broadcast_message("network_connected", {
+        room_id = room.session_id,
+        player_id = network_state.my_player_id
+    })
+end
+
+function on_connection_error(self, error)
+    print("Connection failed:", error)
+    network_state.connected = false
+    network_state.in_room = false
+    
+    -- 재접속 시도
+    timer.delay(3.0, false, function()
+        print("Retrying connection...")
+        connect_to_server(self)
+    end)
+end
+
+function setup_sync_callbacks(self)
+    -- 플레이어 업데이트 동기화
+    sync_manager.on_player_update(function(player_data)
+        broadcast_message("player_update", player_data)
+    end)
+    
+    -- 패드 입력 동기화
+    sync_manager.on_pad_update(function(pad_data)
+        broadcast_message("pad_update", pad_data)
+    end)
+    
+    -- 디버그 정보 동기화
+    sync_manager.on_debug_update(function(debug_data)
+        network_state.debug_bodies = debug_data.bodies or {}
+        broadcast_message("debug_update", debug_data)
+    end)
+    
+    -- 게임 상태 변경
+    sync_manager.on_game_state_change(function(state)
+        update_network_state(self, state)
+    end)
+end
+
+function setup_message_handlers(self, room)
+    -- 플레이어 추가/제거 처리
+    message_handler.register_handler("player_joined", function(data)
+        print("Player joined:", data.sessionId)
+        network_state.players[data.sessionId] = data
+        broadcast_message("player_joined", data)
+    end)
+    
+    message_handler.register_handler("player_left", function(data)
+        print("Player left:", data.sessionId)
+        network_state.players[data.sessionId] = nil
+        broadcast_message("player_left", data)
+    end)
+    
+    -- 디버그 바디 정보 수신
+    message_handler.register_handler("debug_bodies", function(data)
+        network_state.debug_bodies = data.bodies or {}
+        broadcast_message("debug_bodies_update", { bodies = network_state.debug_bodies })
+    end)
+    
+    -- 이동 명령 처리
+    message_handler.register_handler("move_response", function(data)
+        broadcast_message("move_response", data)
+    end)
+end
+
+function on_state_change(self, state)
+    -- 전체 상태 업데이트
+    if state and state.players then
+        -- 플레이어 상태 업데이트
+        for session_id, player_data in pairs(state.players) do
+            local old_player = network_state.players[session_id]
+            network_state.players[session_id] = player_data
+            
+            -- 내 플레이어인지 확인
+            if session_id == network_state.my_player_id then
+                broadcast_message("my_player_update", {
+                    x = player_data.x,
+                    y = player_data.y,
+                    isControllable = player_data.isControllable,
+                    session_id = session_id
+                })
+            else
+                broadcast_message("other_player_update", {
+                    x = player_data.x,
+                    y = player_data.y,
+                    session_id = session_id
+                })
+            end
+        end
+    end
+    
+    -- 전체 상태를 다른 스크립트들에게 전송
+    broadcast_message("game_state_update", {
+        players = network_state.players,
+        my_player_id = network_state.my_player_id
+    })
+end
+
+function update_network_state(self, state)
+    -- 네트워크 상태 업데이트
+    for key, value in pairs(state) do
+        network_state[key] = value
+    end
+end
+
+-- 메시지 큐에 추가
+function broadcast_message(msg_type, data)
+    table.insert(message_queue, {
+        type = msg_type,
+        data = data,
+        target = "all"  -- 모든 게임 오브젝트에게 전송
+    })
+end
+
+function send_message_to_target(target, msg_type, data)
+    table.insert(message_queue, {
+        type = msg_type,
+        data = data,
+        target = target
+    })
+end
+
+-- 메시지 큐 처리
+function process_message_queue(self)
+    for i = #message_queue, 1, -1 do
+        local message = message_queue[i]
+        
+        if message.target == "all" then
+            -- 모든 게임 오브젝트에게 브로드캐스트
+            msg.post("#", hash(message.type), message.data)
+            msg.post("/player2#player2", hash(message.type), message.data)
+            msg.post("/main#main", hash(message.type), message.data)
+        else
+            -- 특정 대상에게만 전송
+            msg.post(message.target, hash(message.type), message.data)
+        end
+        
+        table.remove(message_queue, i)
+    end
+end
+
+-- 다른 스크립트들로부터 받는 메시지 처리
+function on_message(self, message_id, message, sender)
+    local room = room_manager.get_room()
+    
+    if message_id == hash("send_move") then
+        -- 이동 명령 서버로 전송
+        if room and network_state.connected then
+            room:send("move", message)
+        end
+        
+    elseif message_id == hash("send_position_sync") then
+        -- 위치 동기화 서버로 전송
+        if room and network_state.connected then
+            room:send("position_sync", message)
+        end
+        
+    elseif message_id == hash("request_debug_bodies") then
+        -- 디버그 바디 정보 요청
+        if room and network_state.connected then
+            room:send("get_debug_bodies", {})
+        end
+        
+    elseif message_id == hash("get_network_state") then
+        -- 현재 네트워크 상태 요청에 응답
+        msg.post(sender, "network_state_response", {
+            connected = network_state.connected,
+            in_room = network_state.in_room,
+            my_player_id = network_state.my_player_id,
+            players = network_state.players,
+            debug_bodies = network_state.debug_bodies
+        })
+        
+    elseif message_id == hash("disconnect") then
+        -- 접속 해제
+        if room then
+            room_manager.leave()
+        end
+        connection_manager.disconnect()
+        network_state.connected = false
+        network_state.in_room = false
+        
+    elseif message_id == hash("reconnect") then
+        -- 재접속
+        connect_to_server(self)
+    end
+end
+
+function final(self)
+    -- 정리 작업
+    if network_state.room then
+        room_manager.leave()
+    end
+    connection_manager.disconnect()
+    print("Network client manager terminated")
+end

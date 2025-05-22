@@ -1,9 +1,6 @@
--- 플레이어 로직 (네트워크 포함)
-local colyseus_client = require "network.colyseus_client"
-local debug_mod = require "player2.player2_debug"
-local debug_draw = nil
-local colyseus = require "colyseus.sdk"
+-- 플레이어 로직 (client.script 사용)
 
+-- 입력 처리
 local move_vector = { x = 0, y = 0 }
 local keys = {
     [hash("up")] = { axis = "y", value = -1 },
@@ -12,40 +9,39 @@ local keys = {
     [hash("right")] = { axis = "x", value = 1 }
 }
 
-local debug_draw_enabled = true -- F1로 토글할 디버그 드로우 플래그
+-- 네트워크 상태 (client.script로부터 받음)
+local network_state = {
+    connected = false,
+    my_player_id = nil,
+    players = {}
+}
+
+-- client.script와 통신하는 헬퍼 함수들
+local function send_to_network(msg_type, data)
+    msg.post("/network#client", msg_type, data or {})
+end
 
 local function reset_inputs()
     move_vector.x = 0
     move_vector.y = 0
-    if colyseus_client.room then
-        colyseus_client.room:send("move", { x = 0, y = 0 })
-    end
+    send_to_network("send_move", { x = 0, y = 0 })
 end
 
 function init(self)
+    -- 플레이어 상태 초기화
     msg.post(".", "release_input_focus")
     self.is_controllable = false
     self.input_enabled = false
     self.player_ready = false
-    self.debug_timer = 0
+    
+    -- 초기 설정
     reset_inputs()
     msg.post("@render:", "use_fixed_fit_projection", { near = -1, far = 1 })
-    colyseus_client.connect(
-        "ws://localhost:2567", "matter_room",
-        function(room)
-            self.room = room
-            self.is_connected = true
-            print("Joined room:", room.session_id)
-            reset_inputs()
-            setup_room_callbacks(self)
-            room:send("toggle_debug", { enabled = true })
-        end,
-        {
-            update_pad_position = function(message)
-                msg.post("/pad#pad_script", "update_pad_position", { x = message.x, y = message.y })
-            end
-        }
-    )
+    
+    -- client.script에서 네트워크 상태 요청
+    send_to_network("get_network_state")
+    
+    -- 입력 활성화 딜레이
     timer.delay(2.5, false, function()
         if not self.input_enabled then
             self.input_enabled = true
@@ -55,97 +51,29 @@ function init(self)
     end)
 end
 
-function setup_room_callbacks(self)
-    if not self.room then return end
-    local room_callbacks = colyseus.callbacks(self.room)
-    debug_draw = debug_mod.setup_debug_system(self, room_callbacks)
-    
-    room_callbacks:on_add("players", function(player, sessionId)
-        print("New player joined:", sessionId)
-        if sessionId == self.room.session_id then
-            self.my_id = sessionId
-            self.player = player
-        end
-        setup_player_callbacks(self, player, sessionId)
-    end)
-    room_callbacks:on_remove("players", function(player, sessionId)
-        print("Player left:", sessionId)
-    end)
-end
-
-function setup_player_callbacks(self, player, sessionId)
-    if not self.room then return end
-    local room_callbacks = colyseus.callbacks(self.room)
-    if sessionId == self.room.session_id and player.x ~= nil and player.y ~= nil then
-        msg.post("#player2_movement", "update_position", {
-            x = player.x,
-            y = player.y,
-            is_controllable = player.isControllable
-        })
-    end
-    room_callbacks:listen(player, "x", function(curVal, prevVal)
-        if sessionId == self.room.session_id and self.player_ready then
-            msg.post("#player2_movement", "update_position", {
-                x = curVal,
-                y = player.y,
-                is_controllable = player.isControllable
-            })
-        end
-    end)
-    room_callbacks:listen(player, "y", function(curVal, prevVal)
-        if sessionId == self.room.session_id and self.player_ready then
-            msg.post("#player2_movement", "update_position", {
-                x = player.x,
-                y = curVal,
-                is_controllable = player.isControllable
-            })
-        end
-    end)
-    room_callbacks:listen(player, "isControllable", function(curVal, prevVal)
-        if sessionId == self.room.session_id then
-            if curVal ~= self.is_controllable then
-                self.is_controllable = curVal
-                reset_inputs()
-                if self.player_ready then
-                    msg.post("#player2_movement", "update_position", {
-                        x = player.x,
-                        y = player.y,
-                        is_controllable = curVal
-                    })
-                end
-                if curVal == true and self.input_enabled == false then
-                    self.input_enabled = true
-                    msg.post(".", "acquire_input_focus")
-                    print("Input enabled by server control")
-                end
-            end
-        end
-    end)
-end
-
 function update(self, dt)
-    if self.is_connected and self.room and self.input_enabled and self.is_controllable and self.player_ready and (move_vector.x ~= 0 or move_vector.y ~= 0) then
-        self.room:send("move", move_vector)
+    -- 이동 입력 처리 (client.script로 전송)
+    if should_send_move_input(self) then
+        send_to_network("send_move", move_vector)
     end
-    if self.is_connected and self.room and self.debug_timer and self.debug_timer > 0.25 then
-        self.debug_timer = 0
-        self.room:send("get_debug_bodies", {})
-    else
-        self.debug_timer = (self.debug_timer or 0) + dt
-    end
-    if debug_draw_enabled and debug_draw then
-        debug_draw(self)
-    end
+end
+
+-- 이동 입력 전송 조건 확인
+function should_send_move_input(self)
+    return network_state.connected 
+        and self.input_enabled 
+        and self.is_controllable 
+        and self.player_ready 
+        and (move_vector.x ~= 0 or move_vector.y ~= 0)
 end
 
 function on_input(self, action_id, action)
-    if action_id == hash("f1") and action.pressed then
-        debug_draw_enabled = not debug_draw_enabled
-        print("디버그 바디 표시:", debug_draw_enabled and "ON" or "OFF")
-    end
+    -- 플레이어 제어가 가능할 때만 입력 처리
     if not self.input_enabled or not self.is_controllable or not self.player_ready then
         return false
     end
+    
+    -- 이동 키 처리
     if keys[action_id] then
         local key = keys[action_id]
         if action.pressed then
@@ -154,6 +82,8 @@ function on_input(self, action_id, action)
             move_vector[key.axis] = 0
         end
     end
+    
+    -- 대각선 이동 정규화
     if move_vector.x ~= 0 and move_vector.y ~= 0 then
         local length = math.sqrt(move_vector.x * move_vector.x + move_vector.y * move_vector.y)
         move_vector.x = move_vector.x / length
@@ -162,17 +92,78 @@ function on_input(self, action_id, action)
 end
 
 function on_message(self, message_id, message, sender)
+    -- 로컬 게임 메시지
     if message_id == hash("position_ready") then
-        self.player_ready = true
-        if self.is_connected and self.room then
-            self.room:send("move", { x = 0, y = 0 })
-            timer.delay(0.1, false, function()
-                if self.is_connected and self.room then
-                    self.room:send("position_sync", { x = message.x, y = message.y })
-                end
-            end)
+        handle_position_ready(self, message)
+        
+    -- client.script로부터 받는 네트워크 메시지들
+    elseif message_id == hash("network_connected") then
+        handle_network_connected(self, message)
+        
+    elseif message_id == hash("network_state_response") then
+        handle_network_state_response(self, message)
+        
+    elseif message_id == hash("my_player_update") then
+        handle_my_player_update(self, message)
+        
+    elseif message_id == hash("game_state_update") then
+        handle_game_state_update(self, message)
+    end
+end
+
+-- 메시지 핸들러 함수들
+function handle_position_ready(self, message)
+    self.player_ready = true
+    if network_state.connected then
+        send_to_network("send_move", { x = 0, y = 0 })
+        timer.delay(0.1, false, function()
+            if network_state.connected then
+                send_to_network("send_position_sync", { x = message.x, y = message.y })
+            end
+        end)
+    end
+end
+
+function handle_network_connected(self, message)
+    print("Network connected! Player ID:", message.player_id)
+    network_state.connected = true
+    network_state.my_player_id = message.player_id
+end
+
+function handle_network_state_response(self, message)
+    network_state.connected = message.connected
+    network_state.my_player_id = message.my_player_id
+    network_state.players = message.players
+end
+
+function handle_my_player_update(self, message)
+    if message.session_id == network_state.my_player_id then
+        -- 조작 가능 상태 변경
+        if message.isControllable ~= self.is_controllable then
+            self.is_controllable = message.isControllable
+            reset_inputs()
+            
+            if message.isControllable == true and self.input_enabled == false then
+                self.input_enabled = true
+                msg.post(".", "acquire_input_focus")
+                print("Input enabled by server control")
+            end
+        end
+        
+        -- 위치 업데이트
+        if self.player_ready then
+            msg.post("#player2_movement", "update_position", {
+                x = message.x,
+                y = message.y,
+                is_controllable = message.isControllable
+            })
         end
     end
+end
+
+function handle_game_state_update(self, message)
+    network_state.players = message.players
+    network_state.my_player_id = message.my_player_id
 end
 
 function on_enable(self)
