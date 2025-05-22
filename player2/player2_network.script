@@ -1,8 +1,10 @@
--- 네트워크 관련 로직
+-- 플레이어 로직 (네트워크 포함)
+local colyseus_client = require "network.colyseus_client"
+local debug_mod = require "player2.player2_debug"
+local debug_draw = nil
+local setup_debug_callbacks = nil
 local colyseus = require "colyseus.sdk"
 
-local client = nil
-local room = nil
 local move_vector = { x = 0, y = 0 }
 local keys = {
     [hash("up")] = { axis = "y", value = -1 },
@@ -11,147 +13,40 @@ local keys = {
     [hash("right")] = { axis = "x", value = 1 }
 }
 
--- 디버그 시각화 기능 추가
-local DEBUG_COLOR = vmath.vector4(0, 1, 0, 0.7) -- 초록색 (RGBA)
-local debug_bodies = {}             -- 현재 표시할 바디 목록
+local debug_draw_enabled = true -- F1로 토글할 디버그 드로우 플래그
 
--- 모든 입력 상태를 초기화하는 함수
 local function reset_inputs()
     move_vector.x = 0
     move_vector.y = 0
-    -- 서버에 정지 상태 전송
-    if room and client then
-        room:send("move", { x = 0, y = 0 })
+    if colyseus_client.room then
+        colyseus_client.room:send("move", { x = 0, y = 0 })
     end
-end
-
--- 디버그 렌더링 함수
-local function debug_draw(self)
-    if #debug_bodies == 0 then
-        return
-    end
-    
-    for _, body in ipairs(debug_bodies) do
-        if body and body.shape then  -- body가 유효한지 확인
-            if body.shape == "rectangle" then
-                -- 사각형 그리기 (width와 height가 있는지 확인)
-                if body.width and body.height then
-                    msg.post("@render:", "draw_line", {
-                        start_point = vmath.vector3(body.x - body.width/2, body.y - body.height/2, 0),
-                        end_point = vmath.vector3(body.x + body.width/2, body.y - body.height/2, 0),
-                        color = DEBUG_COLOR
-                    })
-                    msg.post("@render:", "draw_line", {
-                        start_point = vmath.vector3(body.x + body.width/2, body.y - body.height/2, 0),
-                        end_point = vmath.vector3(body.x + body.width/2, body.y + body.height/2, 0),
-                        color = DEBUG_COLOR
-                    })
-                    msg.post("@render:", "draw_line", {
-                        start_point = vmath.vector3(body.x + body.width/2, body.y + body.height/2, 0),
-                        end_point = vmath.vector3(body.x - body.width/2, body.y + body.height/2, 0),
-                        color = DEBUG_COLOR
-                    })
-                    msg.post("@render:", "draw_line", {
-                        start_point = vmath.vector3(body.x - body.width/2, body.y + body.height/2, 0),
-                        end_point = vmath.vector3(body.x - body.width/2, body.y - body.height/2, 0),
-                        color = DEBUG_COLOR
-                    })
-                end
-            elseif body.shape == "circle" and body.radius then
-                -- 원 근사 그리기 (16개 선분으로 구성)
-                local segments = 16
-                local angle_step = 2 * math.pi / segments
-                
-                for i = 0, segments - 1 do
-                    local angle1 = i * angle_step
-                    local angle2 = (i + 1) * angle_step
-                    
-                    local x1 = body.x + body.radius * math.cos(angle1)
-                    local y1 = body.y + body.radius * math.sin(angle1)
-                    local x2 = body.x + body.radius * math.cos(angle2)
-                    local y2 = body.y + body.radius * math.sin(angle2)
-                    
-                    msg.post("@render:", "draw_line", {
-                        start_point = vmath.vector3(x1, y1, 0),
-                        end_point = vmath.vector3(x2, y2, 0),
-                        color = DEBUG_COLOR
-                    })
-                end
-            end
-            
-            -- 라벨 표시 (중앙에 작은 십자가)
-            local cross_size = 5
-            msg.post("@render:", "draw_line", {
-                start_point = vmath.vector3(body.x - cross_size, body.y, 0),
-                end_point = vmath.vector3(body.x + cross_size, body.y, 0),
-                color = DEBUG_COLOR
-            })
-            msg.post("@render:", "draw_line", {
-                start_point = vmath.vector3(body.x, body.y - cross_size, 0),
-                end_point = vmath.vector3(body.x, body.y + cross_size, 0),
-                color = DEBUG_COLOR
-            })
-        end
-    end
-end
-
--- 서버에서 디버그 정보 업데이트
-local function setup_debug_callbacks(self, room_callbacks)
-    if not room then return end
-    
-    -- 처음 접속 시 서버에 디버그 정보 요청
-    timer.delay(1, false, function()
-        if self.is_connected and room then
-            room:send("get_debug_bodies", {})
-            print("Requesting initial debug bodies...")
-        end
-    end)
-    
-    -- 직접 디버그 바디 메시지 수신 처리
-    room:on_message("debug_bodies_update", function(message)
-        print("Received debug bodies: " .. #message.bodies .. " bodies")
-        
-        -- 새 배열로 완전히 교체
-        debug_bodies = {}
-        
-        -- 메시지에서 바디 정보 추출
-        for i, body_data in ipairs(message.bodies) do
-            table.insert(debug_bodies, {
-                label = body_data.label,
-                x = body_data.x,
-                y = body_data.y,
-                width = body_data.width,
-                height = body_data.height, 
-                radius = body_data.radius,
-                shape = body_data.shape,
-                isStatic = body_data.isStatic
-            })
-        end
-    end)
 end
 
 function init(self)
-    -- 입력 포커스를 초기에 비활성화
     msg.post(".", "release_input_focus")
-    
-    -- 초기에는 입력 처리를 비활성화
     self.is_controllable = false
     self.input_enabled = false
-    self.first_position_received = false
     self.player_ready = false
-    self.prev_controllable_state = false
     self.debug_timer = 0
-    
-    -- 처음 시작 시 모든 움직임 벡터를 0으로 초기화
     reset_inputs()
-    
-    -- 디버그 렌더링 활성화
     msg.post("@render:", "use_fixed_fit_projection", { near = -1, far = 1 })
-    
-    -- 서버 연결
-    connect_to_server(self)
-    
-    -- 2.5초 후에 입력 활성화 (조금 더 여유롭게)
+    colyseus_client.connect(
+        "ws://localhost:2567", "matter_room",
+        function(room)
+            self.room = room
+            self.is_connected = true
+            print("Joined room:", room.session_id)
+            reset_inputs()
+            setup_room_callbacks(self)
+            room:send("toggle_debug", { enabled = true })
+        end,
+        {
+            update_pad_position = function(message)
+                msg.post("/pad#pad_script", "update_pad_position", { x = message.x, y = message.y })
+            end
+        }
+    )
     timer.delay(2.5, false, function()
         if not self.input_enabled then
             self.input_enabled = true
@@ -161,125 +56,65 @@ function init(self)
     end)
 end
 
-function connect_to_server(self)
-    -- 연결 상태 변수 추가
-    self.is_connected = false
-
-    client = colyseus.Client("ws://localhost:2567")
-    client:join_or_create("matter_room", {}, function(err, _room)
-        if err then
-            print("Join error:", err)
-            return
-        end
-        
-        room = _room
-        self.is_connected = true
-        print("Joined room:", room.session_id)
-        
-        -- 접속 전에 디버그 배열 초기화
-        debug_bodies = {}
-        
-        -- 콜백 설정
-        setup_room_callbacks(self)
-        
-        -- 서버에 디버그 모드 활성화 요청
-        room:send("toggle_debug", { enabled = true })
-    end)
-end
-
 function setup_room_callbacks(self)
-    if not room then return end
-    local room_callbacks = colyseus.callbacks(room)
-    
+    if not self.room then return end
+    local room_callbacks = colyseus.callbacks(self.room)
+    debug_draw, setup_debug_callbacks = debug_mod(self, room_callbacks)
+    setup_debug_callbacks()
     room_callbacks:on_add("players", function(player, sessionId)
         print("New player joined:", sessionId)
-        if sessionId == room.session_id then
+        if sessionId == self.room.session_id then
             self.my_id = sessionId
             self.player = player
         end
         setup_player_callbacks(self, player, sessionId)
     end)
-
     room_callbacks:on_remove("players", function(player, sessionId)
         print("Player left:", sessionId)
     end)
-    
-    -- 디버그 정보 콜백 설정
-    setup_debug_callbacks(self, room_callbacks)
 end
 
 function setup_player_callbacks(self, player, sessionId)
-    if not room then return end
-    local room_callbacks = colyseus.callbacks(room)
-    
-    -- 초기 위치 설정 함수
-    local function set_initial_position()
-        if sessionId == room.session_id and not self.first_position_received then
-            self.first_position_received = true
-            print("Initial position received from server:", player.x, player.y)
-            
-            -- 정확한 초기 위치를 movement 스크립트에 전달
-            msg.post("#player2_movement", "update_position", { 
-                x = player.x, 
+    if not self.room then return end
+    local room_callbacks = colyseus.callbacks(self.room)
+    if sessionId == self.room.session_id and player.x ~= nil and player.y ~= nil then
+        msg.post("#player2_movement", "update_position", {
+            x = player.x,
+            y = player.y,
+            is_controllable = player.isControllable
+        })
+    end
+    room_callbacks:listen(player, "x", function(curVal, prevVal)
+        if sessionId == self.room.session_id and self.player_ready then
+            msg.post("#player2_movement", "update_position", {
+                x = curVal,
                 y = player.y,
-                is_controllable = player.isControllable 
+                is_controllable = player.isControllable
             })
         end
-    end
-    
-    -- 초기 위치 확인 (양쪽 좌표 모두 있는지)
-    if sessionId == room.session_id and player.x ~= nil and player.y ~= nil then
-        set_initial_position()
-    end
-    
-    room_callbacks:listen(player, "x", function(curVal, prevVal)
-        if sessionId == room.session_id then
-            if not self.first_position_received and player.y ~= nil then
-                set_initial_position()
-            elseif self.player_ready then
-                msg.post("#player2_movement", "update_position", { 
-                    x = curVal, 
-                    y = player.y,
-                    is_controllable = player.isControllable 
-                })
-            end
-        end
     end)
-
     room_callbacks:listen(player, "y", function(curVal, prevVal)
-        if sessionId == room.session_id then
-            if not self.first_position_received and player.x ~= nil then
-                set_initial_position()
-            elseif self.player_ready then
-                msg.post("#player2_movement", "update_position", { 
-                    x = player.x, 
-                    y = curVal,
-                    is_controllable = player.isControllable 
-                })
-            end
+        if sessionId == self.room.session_id and self.player_ready then
+            msg.post("#player2_movement", "update_position", {
+                x = player.x,
+                y = curVal,
+                is_controllable = player.isControllable
+            })
         end
     end)
-
     room_callbacks:listen(player, "isControllable", function(curVal, prevVal)
-        if sessionId == room.session_id then
+        if sessionId == self.room.session_id then
             print("isControllable changed:", prevVal, "->", curVal)
-            
-            -- 제어 상태가 변경되었을 때 처리
             if curVal ~= self.is_controllable then
-                self.prev_controllable_state = self.is_controllable
                 self.is_controllable = curVal
-                
-                -- 제어 불가능 상태가 되었거나, 제어 가능 상태로 변경되었을 때 입력 초기화
                 reset_inputs()
-                
                 if self.player_ready then
-                    msg.post("#player2_movement", "update_position", { 
-                        x = player.x, 
+                    msg.post("#player2_movement", "update_position", {
+                        x = player.x,
                         y = player.y,
-                        is_controllable = curVal 
+                        is_controllable = curVal
                     })
                 end
-                
                 if curVal == true and self.input_enabled == false then
                     self.input_enabled = true
                     msg.post(".", "acquire_input_focus")
@@ -291,38 +126,28 @@ function setup_player_callbacks(self, player, sessionId)
 end
 
 function update(self, dt)
-    -- 이전 제어 상태에서 현재 상태로 변경된 감지
-    if self.is_controllable ~= self.prev_controllable_state then
-        self.prev_controllable_state = self.is_controllable
-        -- 제어 상태가 변경될 때마다 입력 초기화
-        reset_inputs()
+    if self.is_connected and self.room and self.input_enabled and self.is_controllable and self.player_ready and (move_vector.x ~= 0 or move_vector.y ~= 0) then
+        self.room:send("move", move_vector)
     end
-    
-    -- 입력 활성화 여부와 서버의 제어 가능 상태를 모두 확인
-    if self.is_connected and room and self.input_enabled and self.is_controllable and self.player_ready and (move_vector.x ~= 0 or move_vector.y ~= 0) then
-        room:send("move", move_vector)
-    end
-    
-    -- 주기적으로 디버그 정보 요청
-    if self.is_connected and room and self.debug_timer and self.debug_timer > 0.25 then
+    if self.is_connected and self.room and self.debug_timer and self.debug_timer > 0.25 then
         self.debug_timer = 0
-        room:send("get_debug_bodies", {})
+        self.room:send("get_debug_bodies", {})
     else
         self.debug_timer = (self.debug_timer or 0) + dt
     end
-end
-
-function on_render(self)
-    -- 항상 디버그 정보 렌더링 (토글 기능 제거)
-    debug_draw(self)
+    if debug_draw_enabled and debug_draw then
+        debug_draw(self)
+    end
 end
 
 function on_input(self, action_id, action)
-    -- 입력이 비활성화 상태이거나 플레이어가 준비되지 않았으면 무시
+    if action_id == hash("f1") and action.pressed then
+        debug_draw_enabled = not debug_draw_enabled
+        print("디버그 바디 표시:", debug_draw_enabled and "ON" or "OFF")
+    end
     if not self.input_enabled or not self.is_controllable or not self.player_ready then
         return false
     end
-    
     if keys[action_id] then
         local key = keys[action_id]
         if action.pressed then
@@ -331,8 +156,6 @@ function on_input(self, action_id, action)
             move_vector[key.axis] = 0
         end
     end
-
-    -- 대각선 이동을 위한 벡터 정규화
     if move_vector.x ~= 0 and move_vector.y ~= 0 then
         local length = math.sqrt(move_vector.x * move_vector.x + move_vector.y * move_vector.y)
         move_vector.x = move_vector.x / length
@@ -341,29 +164,24 @@ function on_input(self, action_id, action)
 end
 
 function on_message(self, message_id, message, sender)
-    -- 플레이어가 준비되고 위치가 설정되었을 때
     if message_id == hash("position_ready") then
         self.player_ready = true
         print("Player ready at position:", message.x, message.y)
-        
-        -- 서버에 새로운 위치 전송
-        if self.is_connected and room then
-            room:send("move", { x = 0, y = 0 }) -- 먼저 멈춤
+        if self.is_connected and self.room then
+            self.room:send("move", { x = 0, y = 0 })
             timer.delay(0.1, false, function()
-                -- 0.1초 후 위치 동기화 메시지 보냄 (위치를 먼저 보냄)
-                if self.is_connected and room then
-                    room:send("position_sync", { x = message.x, y = message.y })
+                if self.is_connected and self.room then
+                    self.room:send("position_sync", { x = message.x, y = message.y })
                 end
             end)
         end
     end
 end
 
--- 스크립트가 활성화/비활성화될 때 입력 초기화
 function on_enable(self)
     reset_inputs()
 end
 
 function on_disable(self)
     reset_inputs()
-end 
+end

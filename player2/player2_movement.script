@@ -89,7 +89,6 @@ function on_message(self, message_id, message, sender)
         
         if message.is_controllable ~= nil then
             self.is_controllable = message.is_controllable
-            print("Movement script received isControllable:", self.is_controllable)
         end
     end
     

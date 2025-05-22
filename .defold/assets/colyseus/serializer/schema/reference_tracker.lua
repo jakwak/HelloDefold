@@ -1,4 +1,3 @@
-
 ---@class reference_tracker
 ---@field refs table
 ---@field ref_counts table
@@ -43,12 +42,10 @@ function reference_tracker:remove(ref_id)
 
   -- skip if ref_id is not being tracked
   if ref_count == nil then
-    print("trying to remove ref_id that doesn't exist: " .. tostring(ref_id))
     return false
   end
 
   if ref_count == 0 then
-    print("trying to remove ref_id with 0 ref_count: " .. tostring(ref_id))
     return false
   end
 

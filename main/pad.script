@@ -1,6 +1,7 @@
 function init(self)
   -- 패드 초기화
-  print("Pad initialized")
+  self.target_position = go.get_position()
+  self.visible = true
   
   -- 패드의 초기 위치
   self.initial_position = go.get_position()
@@ -17,22 +18,18 @@ function init(self)
 end
 
 function update(self, dt)
-  -- 현재 위치 가져오기
-  local current_position = go.get_position()
-  
-  -- 현재 위치가 최대 이동 거리를 넘었는지 확인
-  local distance_from_center = current_position.x - self.initial_position.x
-  
-  -- 방향 전환 체크
-  if math.abs(distance_from_center) >= self.max_distance then
-    self.direction = -self.direction  -- 방향 반전
+  -- 서버에서 받은 위치로만 이동 (보간도 가능)
+  if self.target_position then
+    local current_position = go.get_position()
+    -- 부드럽게 이동하고 싶으면 아래처럼 보간
+    local lerp_speed = 0.2
+    local new_pos = vmath.vector3(
+      current_position.x + (self.target_position.x - current_position.x) * lerp_speed,
+      current_position.y + (self.target_position.y - current_position.y) * lerp_speed,
+      current_position.z
+    )
+    go.set_position(new_pos)
   end
-  
-  -- 새 위치 계산
-  local new_x = current_position.x + self.direction * self.speed * dt
-  
-  -- 위치 업데이트
-  go.set_position(vmath.vector3(new_x, current_position.y, current_position.z))
   
   -- 서버 동기화 타이머 업데이트
   self.sync_timer = self.sync_timer + dt
@@ -44,7 +41,8 @@ function update(self, dt)
   end
 end
 
--- 패드의 현재 위치를 가져오는 함수 (서버 동기화 등에 활용 가능)
-function get_position(self)
-  return go.get_position()
-end 
+function on_message(self, message_id, message, sender)
+  if message_id == hash("update_pad_position") then
+    self.target_position = vmath.vector3(message.x, message.y, 0)
+  end
+end
