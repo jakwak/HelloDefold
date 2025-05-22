@@ -2,7 +2,6 @@
 local colyseus_client = require "network.colyseus_client"
 local debug_mod = require "player2.player2_debug"
 local debug_draw = nil
-local setup_debug_callbacks = nil
 local colyseus = require "colyseus.sdk"
 
 local move_vector = { x = 0, y = 0 }
@@ -59,8 +58,8 @@ end
 function setup_room_callbacks(self)
     if not self.room then return end
     local room_callbacks = colyseus.callbacks(self.room)
-    debug_draw, setup_debug_callbacks = debug_mod(self, room_callbacks)
-    setup_debug_callbacks()
+    debug_draw = debug_mod.setup_debug_system(self, room_callbacks)
+    
     room_callbacks:on_add("players", function(player, sessionId)
         print("New player joined:", sessionId)
         if sessionId == self.room.session_id then
@@ -104,7 +103,6 @@ function setup_player_callbacks(self, player, sessionId)
     end)
     room_callbacks:listen(player, "isControllable", function(curVal, prevVal)
         if sessionId == self.room.session_id then
-            print("isControllable changed:", prevVal, "->", curVal)
             if curVal ~= self.is_controllable then
                 self.is_controllable = curVal
                 reset_inputs()
@@ -166,7 +164,6 @@ end
 function on_message(self, message_id, message, sender)
     if message_id == hash("position_ready") then
         self.player_ready = true
-        print("Player ready at position:", message.x, message.y)
         if self.is_connected and self.room then
             self.room:send("move", { x = 0, y = 0 })
             timer.delay(0.1, false, function()
@@ -184,4 +181,4 @@ end
 
 function on_disable(self)
     reset_inputs()
-end
+end 

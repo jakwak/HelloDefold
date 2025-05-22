@@ -35,8 +35,8 @@ function update(self, dt)
   self.sync_timer = self.sync_timer + dt
   if self.sync_timer >= self.sync_interval then
     self.sync_timer = 0
-    local pos = go.get_position()
-    print("Pad position for server sync: x=" .. pos.x .. ", y=" .. pos.y)
+    -- local pos = go.get_position()
+    -- print("Pad position for server sync: x=" .. pos.x .. ", y=" .. pos.y)
     -- 서버 동기화 코드를 여기에 추가할 수 있음
   end
 end

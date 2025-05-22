@@ -87,9 +87,12 @@ function M.setup_debug_callbacks(self, room_callbacks)
             })
         end
     end)
-
 end
 
-return function(self, room_callbacks)
-    return M.debug_draw, function() return M.setup_debug_callbacks(self, room_callbacks) end
-end 
+-- 디버그 시스템 전체 세팅 함수 (외부에서 이 함수만 호출하면 됨)
+function M.setup_debug_system(self, room_callbacks)
+    M.setup_debug_callbacks(self, room_callbacks)
+    return M.debug_draw
+end
+
+return M 

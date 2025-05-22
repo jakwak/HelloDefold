@@ -4,7 +4,7 @@ components {
 }
 components {
   id: "player2_network"
-  component: "/player2/player2_network.script"
+  component: "/player2/player2.script"
 }
 components {
   id: "random_label"
