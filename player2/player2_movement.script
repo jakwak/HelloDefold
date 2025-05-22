@@ -52,34 +52,33 @@ function on_message(self, message_id, message, sender)
         if not self.received_first_position then
             self.received_first_position = true
             
-            -- 서버 위치 저장 (아직 사용하지 않음)
+            -- 서버 위치 저장
             self.server_pos = vmath.vector3(message.x, message.y, 0)
             
-            -- 1초 후에 지정된 시작 위치에서 나타남
-            timer.delay(1.0, false, function()
-                -- 미리 정의된 가운데 위 위치로 설정
-                go.set_position(self.final_pos)
-                self.target_pos = self.final_pos
-                
-                -- 플레이어 표시
-                msg.post("#sprite", "enable")
-                msg.post("#label", "enable")
-                self.visible = true
-                
-                -- 물리 활성화
-                msg.post("#collisionobject", "enable")
-                
-                -- 속도 초기화
-                msg.post("#collisionobject", "set_linear_velocity", {
-                    linear_velocity = vmath.vector3(0, 0, 0)
-                })
-                
-                -- 서버에 현재 위치 전송 (나중에 필요하면)
-                msg.post("#player2_network", "position_ready", {
-                    x = self.final_pos.x,
-                    y = self.final_pos.y
-                })
-            end)
+            -- 즉시 위치 설정 (지연 없이)
+            print("Player2 showing at position:", message.x, message.y)
+            go.set_position(vmath.vector3(message.x, message.y, 0))
+            self.target_pos = vmath.vector3(message.x, message.y, 0)
+            self.final_pos = vmath.vector3(message.x, message.y, 0)
+            
+            -- 플레이어 표시
+            msg.post("#sprite", "enable")
+            msg.post("#label", "enable")
+            self.visible = true
+            
+            -- 물리 활성화
+            msg.post("#collisionobject", "enable")
+            
+            -- 속도 초기화
+            msg.post("#collisionobject", "set_linear_velocity", {
+                linear_velocity = vmath.vector3(0, 0, 0)
+            })
+            
+            -- 서버에 현재 위치 전송
+            msg.post("#player2_network", "position_ready", {
+                x = message.x,
+                y = message.y
+            })
         else
             -- 이후 위치 업데이트 (보이게 된 이후에만 적용)
             if self.visible then

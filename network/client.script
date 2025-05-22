@@ -4,10 +4,11 @@ local sync_manager = require "network.sync_manager"
 local connection_manager = require "network.connection_manager"
 local room_manager = require "network.room_manager"
 local message_handler = require "network.message_handler"
+local debug_override = require "network.debug_override"
 
--- Go Properties
-go.property("server_url", hash("ws://localhost:2567"))
-go.property("room_name", hash("matter_room"))
+-- 서버 연결 설정 (변수로 변경)
+local server_url = "ws://localhost:2567"
+local room_name = "matter_room"
 
 -- 네트워크 상태
 local network_state = {
@@ -25,6 +26,9 @@ local message_queue = {}
 function init(self)
     print("=== Network Client Manager Started ===")
     
+    -- 디버그 메시지 필터링 활성화
+    debug_override.override_print()
+    
     -- 네트워크 모듈 초기화
     colyseus_client.init()
     
@@ -41,14 +45,11 @@ function init(self)
 end
 
 function connect_to_server(self)
-    local server_url_str = tostring(self.server_url)
-    local room_name_str = tostring(self.room_name)
-    
-    print("Connecting to server:", server_url_str, "Room:", room_name_str)
+    print("Connecting to server:", server_url, "Room:", room_name)
     
     colyseus_client.connect_and_join(
-        server_url_str,
-        room_name_str,
+        server_url,
+        room_name,
         {}, -- 옵션
         function(room)
             on_room_joined(self, room)
@@ -68,7 +69,7 @@ function on_room_joined(self, room)
     network_state.my_player_id = room.session_id
     
     -- 룸 상태 변경 감지
-    message_handler.on_state_change(function(state)
+    room:on("statechange", function(state)
         on_state_change(self, state)
     end)
     
@@ -141,6 +142,16 @@ function setup_message_handlers(self, room)
     message_handler.register_handler("move_response", function(data)
         broadcast_message("move_response", data)
     end)
+    
+    -- 패드 위치 업데이트 처리
+    message_handler.register_handler("update_pad_position", function(data)
+        broadcast_message("pad_update", data)
+    end)
+    
+    -- 서버에서 패드 위치 응답 처리
+    message_handler.register_handler("pad_position_response", function(data)
+        broadcast_message("pad_position_update", data)
+    end)
 end
 
 function on_state_change(self, state)
@@ -148,21 +159,28 @@ function on_state_change(self, state)
     if state and state.players then
         -- 플레이어 상태 업데이트
         for session_id, player_data in pairs(state.players) do
-            local old_player = network_state.players[session_id]
-            network_state.players[session_id] = player_data
+            -- 중요: 복제본 생성으로 참조 문제 방지
+            local player_copy = {}
+            for k, v in pairs(player_data) do
+                if type(v) ~= "table" then
+                    player_copy[k] = v
+                end
+            end
+            
+            network_state.players[session_id] = player_copy
             
             -- 내 플레이어인지 확인
             if session_id == network_state.my_player_id then
                 broadcast_message("my_player_update", {
-                    x = player_data.x,
-                    y = player_data.y,
-                    isControllable = player_data.isControllable,
+                    x = player_copy.x,
+                    y = player_copy.y,
+                    isControllable = player_copy.isControllable,
                     session_id = session_id
                 })
             else
                 broadcast_message("other_player_update", {
-                    x = player_data.x,
-                    y = player_data.y,
+                    x = player_copy.x,
+                    y = player_copy.y,
                     session_id = session_id
                 })
             end
@@ -170,8 +188,14 @@ function on_state_change(self, state)
     end
     
     -- 전체 상태를 다른 스크립트들에게 전송
+    -- 중요: 복제본에서 플레이어 정보만 분리해서 전송
+    local player_ids = {}
+    for id, _ in pairs(network_state.players) do
+        table.insert(player_ids, id)
+    end
+    
     broadcast_message("game_state_update", {
-        players = network_state.players,
+        player_ids = player_ids,
         my_player_id = network_state.my_player_id
     })
 end
@@ -205,14 +229,26 @@ function process_message_queue(self)
     for i = #message_queue, 1, -1 do
         local message = message_queue[i]
         
+        -- 메시지 순환 참조 방지를 위한 복사본 생성
+        local safe_data = {}
+        if message.data then
+            for k, v in pairs(message.data) do
+                if type(v) ~= "table" and k ~= "players" then
+                    safe_data[k] = v
+                elseif type(v) == "number" or type(v) == "string" or type(v) == "boolean" then
+                    safe_data[k] = v
+                end
+            end
+        end
+        
         if message.target == "all" then
             -- 모든 게임 오브젝트에게 브로드캐스트
-            msg.post("#", hash(message.type), message.data)
-            msg.post("/player2#player2", hash(message.type), message.data)
-            msg.post("/main#main", hash(message.type), message.data)
+            msg.post("#", hash(message.type), safe_data)
+            msg.post("/player2#player2_network", hash(message.type), safe_data)
+            msg.post("/main#wall_script", hash(message.type), safe_data)
         else
             -- 특정 대상에게만 전송
-            msg.post(message.target, hash(message.type), message.data)
+            msg.post(message.target, hash(message.type), safe_data)
         end
         
         table.remove(message_queue, i)
@@ -263,6 +299,12 @@ function on_message(self, message_id, message, sender)
     elseif message_id == hash("reconnect") then
         -- 재접속
         connect_to_server(self)
+        
+    elseif message_id == hash("update_pad_position") then
+        -- 패드 위치 업데이트 처리
+        if room and network_state.connected then
+            room:send("pad_position", message)
+        end
     end
 end
 
@@ -272,5 +314,9 @@ function final(self)
         room_manager.leave()
     end
     connection_manager.disconnect()
+    
+    -- 디버그 메시지 필터링 복원
+    debug_override.restore_print()
+    
     print("Network client manager terminated")
 end

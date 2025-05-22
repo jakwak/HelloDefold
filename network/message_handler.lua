@@ -65,11 +65,11 @@ end
 function M.on_state_change(callback)
     local room = room_manager.get_room()
     if room then
-        room:on_state_change(callback)
+        room:on("statechange", callback)
     else
         -- 룸 조인시 등록하도록 저장
         room_manager.on_join(function(room)
-            room:on_state_change(callback)
+            room:on("statechange", callback)
         end)
     end
 end
