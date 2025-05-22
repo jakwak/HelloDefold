@@ -1,0 +1,10 @@
+function init(self)
+  -- 초기화 함수
+  print("Walls initialized")
+  
+  -- 패드 참조 제거 - 이제 별도의 게임 오브젝트로 존재
+end
+
+function update(self, dt)
+  -- 벽만의 기능을 처리 (현재는 특별한 기능 없음)
+end 
