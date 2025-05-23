@@ -232,11 +232,16 @@ function process_message_queue(self)
         -- 메시지 순환 참조 방지를 위한 복사본 생성
         local safe_data = {}
         if message.data then
-            for k, v in pairs(message.data) do
-                if type(v) ~= "table" and k ~= "players" then
-                    safe_data[k] = v
-                elseif type(v) == "number" or type(v) == "string" or type(v) == "boolean" then
-                    safe_data[k] = v
+            -- 디버그 바디 정보는 특별 처리
+            if message.type == "debug_bodies_update" and message.data.bodies then
+                safe_data = { bodies = message.data.bodies }
+            else
+                for k, v in pairs(message.data) do
+                    if type(v) ~= "table" and k ~= "players" then
+                        safe_data[k] = v
+                    elseif type(v) == "number" or type(v) == "string" or type(v) == "boolean" then
+                        safe_data[k] = v
+                    end
                 end
             end
         end
@@ -246,6 +251,11 @@ function process_message_queue(self)
             msg.post("#", hash(message.type), safe_data)
             msg.post("/player2#player2_network", hash(message.type), safe_data)
             msg.post("/main#wall_script", hash(message.type), safe_data)
+            
+            -- debug_server_bodies 스크립트에도 디버그 메시지 전달
+            if message.type == "debug_bodies_update" then
+                msg.post("#debug_server_bodies", hash(message.type), safe_data)
+            end
         else
             -- 특정 대상에게만 전송
             msg.post(message.target, hash(message.type), safe_data)

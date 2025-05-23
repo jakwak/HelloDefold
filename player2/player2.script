@@ -165,6 +165,7 @@ function handle_network_state_response(self, message)
 end
 
 function handle_my_player_update(self, message)
+    print("handle_my_player_update:", message.session_id, network_state.my_player_id)
     if message.session_id == network_state.my_player_id then
         -- 조작 가능 상태 변경
         if message.isControllable ~= self.is_controllable then

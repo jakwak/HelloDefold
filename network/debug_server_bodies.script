@@ -15,32 +15,52 @@ local DEBUG_COLOR = vmath.vector4(0, 1, 0, 0.7) -- 초록색 (RGBA)
 function init(self)
     print("=== Debug Server Bodies Manager Started ===")
     
+    -- 초기화
+    self.has_reported_bodies = false
+    debug_state.bodies = {}
+    debug_state.enabled = true
+    
     -- 입력 포커스 획득 (F1 키 처리용)
     msg.post(".", "acquire_input_focus")
     
     -- 네트워크 상태 확인
-    msg.post("/network#client", "get_network_state", {})
+    msg.post("/client#client", "get_network_state", {})
     
-    -- 주기적으로 디버그 정보 요청
+    -- 처음 시작시 즉시 요청
+    timer.delay(0.5, false, function()
+        request_debug_bodies()
+    end)
+    
+    -- 주기적으로 디버그 정보 요청 (더 짧은 간격)
     timer.delay(1.0, true, function()
-        if debug_state.network_connected then
-            request_debug_bodies()
-        end
+        request_debug_bodies()
     end)
 end
 
 -- client.script로 디버그 바디 정보 요청
 function request_debug_bodies()
-    msg.post("/network#client", "request_debug_bodies", {})
+    msg.post("/client#client", "request_debug_bodies", {})
 end
 
 -- 디버그 바디 렌더링
 function render_debug_bodies(self)
-    if not debug_state.enabled or #debug_state.bodies == 0 then
+    if not debug_state.enabled then
         return
     end
     
-    for _, body in ipairs(debug_state.bodies) do
+    -- 디버그 바디 테이블 확인 및 생성
+    if not debug_state.bodies or type(debug_state.bodies) ~= "table" then
+        debug_state.bodies = {}
+        return
+    end
+    
+    -- 디버그 바디 수 변경 시 업데이트
+    if self.last_bodies_count ~= #debug_state.bodies then
+        self.last_bodies_count = #debug_state.bodies
+    end
+    
+    -- 모든 바디 렌더링
+    for i, body in ipairs(debug_state.bodies) do
         if body and body.shape then
             -- 사각형 렌더링
             if body.shape == "rectangle" and body.width and body.height then
@@ -182,22 +202,65 @@ function handle_network_connected(self, message)
 end
 
 function handle_network_state_response(self, message)
+    local was_connected = debug_state.network_connected
     debug_state.network_connected = message.connected
+    
+    if message.connected and not was_connected then
+        print("Debug: Network connected, requesting debug bodies")
+        request_debug_bodies()
+    end
+    
     if message.debug_bodies then
-        debug_state.bodies = message.debug_bodies
+        -- 새로운 바디 배열 생성 (깊은 복사)
+        local new_bodies = {}
+        for i, body in ipairs(message.debug_bodies) do
+            new_bodies[i] = body
+        end
+        
+        debug_state.bodies = new_bodies
         print("Debug bodies loaded from network state:", #debug_state.bodies)
     end
 end
 
 function handle_debug_bodies_update(self, message)
-    if message.bodies then
-        debug_state.bodies = message.bodies
-        
-        -- 디버그 정보 로그 (선택적)
-        if debug_state.enabled then
-            print(string.format("Debug bodies updated: %d bodies received", #debug_state.bodies))
+    -- 메시지가 없는 경우 조용히 종료
+    if not message then
+        return
+    end
+    
+    -- bodies 필드가 존재하는지 확인
+    if not message.bodies then
+        return
+    end
+    
+    -- bodies가 table인지 확인
+    if type(message.bodies) ~= "table" then
+        return
+    end
+    
+    -- 새 바디 배열 생성 (깊은 복사)
+    local new_bodies = {}
+    for i, body in ipairs(message.bodies) do
+        -- 유효한 바디 데이터인지 검증
+        if body and type(body) == "table" and body.shape then
+            -- 바디 데이터 복사
+            local body_copy = {}
+            for k, v in pairs(body) do
+                body_copy[k] = v
+            end
+            
+            new_bodies[i] = body_copy
         end
     end
+    
+    -- 바디 수가 0이면 원본 바디 유지
+    if #new_bodies == 0 then
+        return
+    end
+    
+    -- 바디 데이터 업데이트
+    debug_state.bodies = new_bodies
+    self.has_reported_bodies = true
 end
 
 -- 외부에서 호출할 수 있는 API 함수들

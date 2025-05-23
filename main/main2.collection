@@ -26,5 +26,9 @@ embedded_instances {
   "  id: \"client\"\n"
   "  component: \"/network/client.script\"\n"
   "}\n"
+  "components {\n"
+  "  id: \"debug_server_bodies\"\n"
+  "  component: \"/network/debug_server_bodies.script\"\n"
+  "}\n"
   ""
 }
