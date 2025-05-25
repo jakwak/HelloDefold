@@ -5,6 +5,7 @@ local connection_manager = require "network.connection_manager"
 local room_manager = require "network.room_manager"
 local message_handler = require "network.message_handler"
 local debug_override = require "network.debug_override"
+local Colyseus = require "colyseus.sdk"
 
 -- 서버 연결 설정 (변수로 변경)
 local server_url = "ws://localhost:2567"
@@ -68,10 +69,8 @@ function on_room_joined(self, room)
     network_state.room = room
     network_state.my_player_id = room.session_id
     
-    -- 룸 상태 변경 감지
-    room:on("statechange", function(state)
-        on_state_change(self, state)
-    end)
+    -- network.lua 방식의 콜백 설정
+    setup_player_callbacks(self, room)
     
     -- 메시지 핸들러들 등록
     setup_message_handlers(self, room)
@@ -154,50 +153,126 @@ function setup_message_handlers(self, room)
     end)
 end
 
-function on_state_change(self, state)
-    -- 전체 상태 업데이트
-    if state and state.players then
-        -- 플레이어 상태 업데이트
-        for session_id, player_data in pairs(state.players) do
-            -- 중요: 복제본 생성으로 참조 문제 방지
-            local player_copy = {}
-            for k, v in pairs(player_data) do
-                if type(v) ~= "table" then
-                    player_copy[k] = v
-                end
+-- network.lua 방식의 플레이어 콜백 설정
+function setup_player_callbacks(self, room)
+    local room_callbacks = Colyseus.callbacks(room)
+    
+    -- 새로운 플레이어가 참가했을 때
+    room_callbacks:on_add("players", function (player, sessionId)
+        if not sessionId then
+            print("Warning: sessionId is nil!")
+            return
+        end
+        
+        print("Player added:", sessionId)
+        
+        -- 플레이어를 network_state에 추가
+        if not network_state.players[sessionId] then
+            network_state.players[sessionId] = {}
+        end
+        
+        -- 내 플레이어인지 다른 플레이어인지 구분
+        if sessionId == room.session_id then
+            -- 내 플레이어 추가
+            broadcast_message("my_player_added", {
+                session_id = sessionId,
+                player_data = player
+            })
+        else
+            -- 다른 플레이어 추가
+            broadcast_message("other_player_added", {
+                session_id = sessionId,
+                player_data = player
+            })
+        end
+        
+        -- 플레이어 이름 변경 감지
+        room_callbacks:listen(player, "name", function (curVal, prevVal)
+            network_state.players[sessionId].name = curVal
+            broadcast_message("player_name_update", {
+                session_id = sessionId,
+                name = curVal
+            })
+        end)
+        
+        -- 플레이어 X 위치 변경 감지
+        room_callbacks:listen(player, "x", function (curVal, prevVal)
+            if not network_state.players[sessionId] then
+                network_state.players[sessionId] = {}
             end
+            network_state.players[sessionId].x = curVal
             
-            network_state.players[session_id] = player_copy
-            
-            -- 내 플레이어인지 확인
-            if session_id == network_state.my_player_id then
+            if sessionId == room.session_id then
+                -- 내 플레이어 위치 업데이트
                 broadcast_message("my_player_update", {
-                    x = player_copy.x,
-                    y = player_copy.y,
-                    isControllable = player_copy.isControllable,
-                    session_id = session_id
+                    x = curVal,
+                    y = network_state.players[sessionId].y,
+                    session_id = sessionId
                 })
             else
+                -- 다른 플레이어 위치 업데이트
                 broadcast_message("other_player_update", {
-                    x = player_copy.x,
-                    y = player_copy.y,
-                    session_id = session_id
+                    x = curVal,
+                    y = network_state.players[sessionId].y,
+                    session_id = sessionId
                 })
             end
+        end)
+        
+        -- 플레이어 Y 위치 변경 감지
+        room_callbacks:listen(player, "y", function (curVal, prevVal)
+            if not network_state.players[sessionId] then
+                network_state.players[sessionId] = {}
+            end
+            network_state.players[sessionId].y = curVal
+            
+            if sessionId == room.session_id then
+                -- 내 플레이어 위치 업데이트
+                broadcast_message("my_player_update", {
+                    x = network_state.players[sessionId].x,
+                    y = curVal,
+                    session_id = sessionId
+                })
+            else
+                -- 다른 플레이어 위치 업데이트
+                broadcast_message("other_player_update", {
+                    x = network_state.players[sessionId].x,
+                    y = curVal,
+                    session_id = sessionId
+                })
+            end
+        end)
+    end)
+    
+    -- 플레이어가 나갔을 때
+    room_callbacks:on_remove("players", function (player, sessionId)
+        print("Player removed:", sessionId)
+        
+        if network_state.players[sessionId] then
+            network_state.players[sessionId] = nil
         end
+        
+        broadcast_message("player_left", {
+            session_id = sessionId
+        })
+    end)
+    
+    -- 전체 게임 상태 업데이트 (플레이어 목록 변경 시)
+    local function update_game_state()
+        local player_ids = {}
+        for id, _ in pairs(network_state.players) do
+            table.insert(player_ids, id)
+        end
+        
+        broadcast_message("game_state_update", {
+            player_ids = player_ids,
+            my_player_id = network_state.my_player_id
+        })
     end
     
-    -- 전체 상태를 다른 스크립트들에게 전송
-    -- 중요: 복제본에서 플레이어 정보만 분리해서 전송
-    local player_ids = {}
-    for id, _ in pairs(network_state.players) do
-        table.insert(player_ids, id)
-    end
-    
-    broadcast_message("game_state_update", {
-        player_ids = player_ids,
-        my_player_id = network_state.my_player_id
-    })
+    -- 플레이어 추가/제거 시 게임 상태 업데이트
+    room_callbacks:on_add("players", update_game_state)
+    room_callbacks:on_remove("players", update_game_state)
 end
 
 function update_network_state(self, state)
@@ -251,6 +326,7 @@ function process_message_queue(self)
             msg.post("#", hash(message.type), safe_data)
             msg.post("/player2#player2_network", hash(message.type), safe_data)
             msg.post("/main#wall_script", hash(message.type), safe_data)
+            msg.post("/pad#pad_script", hash(message.type), safe_data)
             
             -- debug_server_bodies 스크립트에도 디버그 메시지 전달
             if message.type == "debug_bodies_update" then

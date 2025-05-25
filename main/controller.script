@@ -1,0 +1,100 @@
+local Colyseus = require "colyseus.sdk"
+local utils = require "main.utils"
+
+local room = nil
+
+function init(self)
+	msg.post(".", "acquire_input_focus") -- 입력 포커스 획득
+	self.target_dir = vmath.vector3(0, 0, 0)
+	self.target_pos = nil
+end
+
+function final(self)
+	-- Add finalization code here
+	-- Learn more: https://defold.com/manuals/script/
+	-- Remove this function if not needed
+end
+
+function update(self, dt)
+	if self.target_pos then
+		local current_pos = go.get_position()
+		local new_pos = vmath.lerp(0.1, current_pos, self.target_pos) -- 부드럽게 이동
+		go.set_position(new_pos)
+	end
+
+	if room == nil then
+		room = _G.network_room
+		if room then
+			local callbacks = Colyseus.callbacks(room)
+			callbacks:on_add("players", function(player, session_id)
+				if session_id == room.session_id then
+					callbacks:listen(player, "x", function(cur_val, prev_val)
+						if not self.target_pos then
+							self.target_pos = go.get_position()
+						end
+						self.target_pos.x = cur_val
+					end)
+					callbacks:listen(player, "y", function(cur_val, prev_val)
+						if not self.target_pos then
+							self.target_pos = go.get_position()
+						end
+						self.target_pos.y = cur_val
+					end)
+				end
+			end)
+		end
+	end
+end
+
+function fixed_update(self, dt)
+	-- This function is called if 'Fixed Update Frequency' is enabled in the Engine section of game.project
+	-- Can be coupled with fixed updates of the physics simulation if 'Use Fixed Timestep' is enabled in
+	-- Physics section of game.project
+	-- Add update code here
+	-- Learn more: https://defold.com/manuals/script/
+	-- Remove this function if not needed
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("set_player_info") then
+		if message.username then
+			self.username = message.username
+			label.set_text("#label", tostring(self.username))
+		end
+		if message.size then
+			self.size = message.size
+			go.set("#sprite", "scale", vmath.vector3(self.size/32 * 4, self.size/32 * 4, 1))
+		end
+		if message.color then
+			self.color = message.color
+			go.set("#sprite", "tint", utils.hex_to_v4(tostring(self.color)))
+		end
+	end
+end
+
+function on_input(self, action_id, action)
+	-- 마우스 클릭 또는 터치일 때만 위치 변경
+	if action_id == hash("touch") and (action.pressed or action.released or action.repeated) then
+		-- 게임 오브젝트의 월드 좌표 구하기
+		local obj_pos = go.get_position() -- 현재 오브젝트의 월드 좌표
+
+		-- 입력 위치 (마우스 또는 터치)
+		local pos = vmath.vector3(action.x or 0, action.y or 0, 0)
+
+		-- 방향 벡터 계산 (정규화)
+		local dir = vmath.normalize(pos - obj_pos)
+
+		self.target_dir = dir
+
+		if room then
+			room:send("move", { x = dir.x, y = dir.y * -1 })
+		end
+	end
+	return false
+end
+
+function on_reload(self)
+	-- Add reload-handling code here
+	-- Learn more: https://defold.com/manuals/hot-reload/
+	-- Remove this function if not needed
+end

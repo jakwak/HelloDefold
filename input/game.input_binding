@@ -27,8 +27,40 @@ key_trigger {
   action: "space"
 }
 key_trigger {
+  input: KEY_SPACE
+  action: "key_space"
+}
+key_trigger {
   input: KEY_F1
   action: "f1"
+}
+key_trigger {
+  input: KEY_T
+  action: "key_t"
+}
+key_trigger {
+  input: KEY_M
+  action: "key_m"
+}
+key_trigger {
+  input: KEY_D
+  action: "key_d"
+}
+key_trigger {
+  input: KEY_R
+  action: "key_r"
+}
+key_trigger {
+  input: KEY_H
+  action: "key_h"
+}
+key_trigger {
+  input: KEY_P
+  action: "key_p"
+}
+key_trigger {
+  input: KEY_O
+  action: "key_o"
 }
 mouse_trigger {
   input: MOUSE_BUTTON_1

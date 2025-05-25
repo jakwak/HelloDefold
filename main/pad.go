@@ -1,9 +1,9 @@
 components {
-  id: "pad_script"
+  id: "pad"
   component: "/main/pad.script"
 }
 embedded_components {
-  id: "sprite"
+  id: "pad_sprite"
   type: "sprite"
   data: "default_animation: \"wall_horizontal\"\n"
   "material: \"/builtins/materials/sprite.material\"\n"
@@ -12,10 +12,6 @@ embedded_components {
   "  texture: \"/assets/images/walls/walls.atlas\"\n"
   "}\n"
   ""
-  position {
-    x: 0.0
-    y: 0.0
-  }
   scale {
     x: 0.2
   }

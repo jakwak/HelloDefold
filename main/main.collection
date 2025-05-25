@@ -1,19 +1,44 @@
 name: "main"
 instances {
-  id: "player"
-  prototype: "/player/player.go"
-  position {
-    x: 30.0
-    y: 30.0
-  }
+  id: "walls"
+  prototype: "/main/walls.go"
 }
 scale_along_z: 0
 embedded_instances {
-  id: "players"
-  data: "embedded_components {\n"
-  "  id: \"factory\"\n"
+  id: "managers"
+  data: "components {\n"
+  "  id: \"global_network\"\n"
+  "  component: \"/main/global_network.script\"\n"
+  "}\n"
+  "components {\n"
+  "  id: \"debug-bodies\"\n"
+  "  component: \"/main/debug_bodies.script\"\n"
+  "}\n"
+  ""
+}
+embedded_instances {
+  id: "spawner"
+  data: "components {\n"
+  "  id: \"spawner\"\n"
+  "  component: \"/main/spawner.script\"\n"
+  "}\n"
+  "embedded_components {\n"
+  "  id: \"npc_factory\"\n"
   "  type: \"factory\"\n"
-  "  data: \"prototype: \\\"/player/other_player.go\\\"\\n"
+  "  data: \"prototype: \\\"/main/npc.go\\\"\\n"
+  "load_dynamically: true\\n"
+  "\"\n"
+  "}\n"
+  "embedded_components {\n"
+  "  id: \"pad_factory\"\n"
+  "  type: \"factory\"\n"
+  "  data: \"prototype: \\\"/main/pad.go\\\"\\n"
+  "\"\n"
+  "}\n"
+  "embedded_components {\n"
+  "  id: \"player_factory\"\n"
+  "  type: \"factory\"\n"
+  "  data: \"prototype: \\\"/main/player.go\\\"\\n"
   "\"\n"
   "}\n"
   ""

@@ -1,0 +1,325 @@
+-- 전역 네트워크 관리자
+local Colyseus = require "colyseus.sdk"
+local utils = require "main.utils"
+
+-- 서버 연결 설정
+local SERVER_URL = "ws://localhost:2567"
+local ROOM_NAME = "matter_room"
+
+-- 전역 변수들
+_G.network_room = nil        -- 전역 room 변수
+_G.network_connected = false -- 연결 상태
+_G.my_session_id = nil       -- 내 세션 ID
+_G.players = {}              -- 플레이어 목록
+
+-- 로컬 상태
+local reconnect_timer = nil
+local reconnect_delay = 3.0
+local previous_state = nil
+
+-- 이름 결정 함수 삭제 (utils에서 가져옴)
+
+-- 시작 위치 설정 (옵션)
+local join_options = {
+  x = 480,  -- 원하는 시작 x 좌표 (주석 해제하면 사용)
+  y = 320,   -- 원하는 시작 y 좌표 (주석 해제하면 사용)
+  username = utils.get_username()
+}
+
+function init(self)
+  print("=== Global Network Manager Started ===")
+
+  -- 초기화
+  _G.network_room = nil
+  _G.network_connected = false
+  _G.my_session_id = nil
+  _G.players = {}
+
+  -- 서버 접속 시도
+  connect_to_server()
+end
+
+function connect_to_server()
+  print("서버 접속 시도:", SERVER_URL, "룸:", ROOM_NAME)
+
+  local client = Colyseus.Client(SERVER_URL)
+
+  client:join_or_create(ROOM_NAME, join_options, function(err, room)
+    if err then
+      print("서버 접속 실패:", err.message)
+      schedule_reconnect()
+      return
+    end
+
+    print("서버 접속 성공! 세션 ID:", room.session_id)
+
+    -- 전역 변수 설정
+    _G.network_room = room
+    _G.network_connected = true
+    _G.my_session_id = room.session_id
+
+    -- 룸 이벤트 설정
+    -- setup_room_events(room)
+
+    room:on("error", function(code, message)
+      print("룸 에러:", message)
+      cleanup_connection()
+      schedule_reconnect()
+    end)
+
+    room:on("leave", function()
+      print("룸에서 나감.")
+      cleanup_connection()
+    end)
+
+    utils.broadcast("network_connected", {
+      room_id = room.session_id,
+      session_id = room.session_id
+    })
+  end)
+end
+
+function on_message(self, message_id, message, sender)
+  if message_id == hash("register_listener") then
+    utils.register_listener(message.id)
+  end
+  if message_id == hash("factory_created") and _G.network_connected then
+    msg.post(sender, "network_connected")
+  end
+end
+
+-- function setup_room_events(room)
+--   room:on("error", function(code, message)
+--     print("룸 에러:", message)
+--     cleanup_connection()
+--     schedule_reconnect()
+--   end)
+
+--   room:on("leave", function()
+--     print("룸에서 나감.")
+--     cleanup_connection()
+--   end)
+
+--   -- room:on_message("*", function(message_type, message)
+--   --   print("*** message_type: ", message_type)
+--   --   handle_server_message(message_type, message)
+--   -- end)
+
+--   local callbacks = Colyseus.callbacks(room)
+
+--   -- 플레이어 추가
+--   callbacks:on_add("players", function(player, session_id)
+--     print("플레이어 추가됨:", session_id)
+
+--     if not _G.players[session_id] then
+--       _G.players[session_id] = {}
+--     end
+
+--     -- 플레이어 데이터 변경 감지
+--     callbacks:listen(player, "x", function(cur_val, prev_val)
+--       if not _G.players[session_id] then
+--         _G.players[session_id] = {}
+--       end
+--       _G.players[session_id].x = cur_val
+
+--       -- 위치 업데이트 브로드캐스트
+--       utils.broadcast("player_position_update", {
+--         session_id = session_id,
+--         x = cur_val,
+--         y = _G.players[session_id].y or 0,
+--         is_my_player = session_id == _G.my_session_id
+--       })
+--     end)
+
+--     callbacks:listen(player, "y", function(cur_val, prev_val)
+--       if not _G.players[session_id] then
+--         _G.players[session_id] = {}
+--       end
+--       _G.players[session_id].y = cur_val
+
+--       -- 위치 업데이트 브로드캐스트
+--       utils.broadcast("player_position_update", {
+--         session_id = session_id,
+--         x = _G.players[session_id].x or 0,
+--         y = cur_val,
+--         is_my_player = session_id == _G.my_session_id
+--       })
+--     end)
+
+--     callbacks:listen(player, "name", function(cur_val, prev_val)
+--       if not _G.players[session_id] then
+--         _G.players[session_id] = {}
+--       end
+--       _G.players[session_id].name = cur_val
+
+--       -- 이름 업데이트 브로드캐스트
+--       utils.broadcast("player_name_update", {
+--         session_id = session_id,
+--         name = cur_val,
+--         is_my_player = session_id == _G.my_session_id
+--       })
+--     end)
+--   end)
+
+--   -- 플레이어 제거
+--   callbacks:on_remove("players", function(player, session_id)
+--     print("플레이어 제거됨:", session_id)
+--     _G.players[session_id] = nil
+
+--     utils.broadcast("player_removed", {
+--       session_id = session_id
+--     })
+--   end)
+-- end
+
+-- function handle_server_message(message_type, message)
+--   print("서버 메시지 수신:", message_type)
+
+--   if message_type == "debug_bodies" then
+--     print("debug_bodies: ", message.bodies)
+--     -- 디버그 바디 정보 브로드캐스트
+--     utils.broadcast("debug_bodies_update", {
+--       bodies = message.bodies or {}
+--     })
+--   elseif message_type == "move_response" then
+--     print("move_response: ", message.x, message.y)
+--     -- 이동 응답 브로드캐스트
+--     utils.broadcast("move_response", message)
+--   elseif message_type == "pad_position_response" then
+--     print("pad_position_response: ", message.x, message.y)
+--     -- 패드 위치 응답 브로드캐스트
+--     utils.broadcast("pad_position_update", message)
+--   else
+--     print("server_message: ", message_type)
+--     -- 기타 메시지들을 그대로 브로드캐스트
+--     utils.broadcast("server_message", {
+--       type = message_type,
+--       data = message
+--     })
+--   end
+-- end
+
+-- function broadcast_message(msg_type, data)
+--   -- 모든 게임 오브젝트에게 메시지 브로드캐스트
+--   local safe_data = data or {}
+
+--   print("📡 브로드캐스트:", msg_type)
+
+--   -- 시스템 전체에 브로드캐스트
+--   msg.post("@system:", msg_type, safe_data)
+
+--   -- 실제로 존재하는 게임 오브젝트들에게만 전송
+--   local targets = {
+--     "/test_manager#test" -- test.script (실제로 존재하는 경로)
+--   }
+
+--   for _, target in ipairs(targets) do
+--     local success, error_msg = pcall(function()
+--       msg.post(target, msg_type, safe_data)
+--     end)
+--     if success then
+--       print("  ✅", target)
+--     else
+--       print("  ❌", target, "- 에러:", error_msg)
+--     end
+--   end
+-- end
+
+function cleanup_connection()
+  _G.network_room = nil
+  _G.network_connected = false
+  _G.my_session_id = nil
+  _G.players = {}
+end
+
+function schedule_reconnect()
+  if reconnect_timer then
+    timer.cancel(reconnect_timer)
+  end
+
+  reconnect_timer = timer.delay(reconnect_delay, false, function()
+    print("재접속 시도 중...")
+    connect_to_server()
+  end)
+end
+
+-- function on_message(self, message_id, message, sender)
+--   if message_id == hash("send_move") then
+--     -- 이동 명령 서버로 전송
+--     if _G.network_room and _G.network_connected then
+--       _G.network_room:send("move", message)
+--     else
+--       print("네트워크에 연결되지 않음 - 이동 명령 무시")
+--     end
+--   elseif message_id == hash("send_position") then
+--     -- 위치 정보 서버로 전송
+--     if _G.network_room and _G.network_connected then
+--       _G.network_room:send("position_sync", message)
+--     else
+--       print("네트워크에 연결되지 않음 - 위치 동기화 무시")
+--     end
+--   elseif message_id == hash("request_debug_bodies") then
+--     -- 디버그 바디 정보 요청
+--     if _G.network_room and _G.network_connected then
+--       _G.network_room:send("get_debug_bodies", {})
+--     else
+--       print("네트워크에 연결되지 않음 - 디버그 바디 요청 무시")
+--     end
+--   elseif message_id == hash("update_pad_position") then
+--     -- 패드 위치 업데이트
+--     if _G.network_room and _G.network_connected then
+--       _G.network_room:send("pad_position", message)
+--     else
+--       print("네트워크에 연결되지 않음 - 패드 위치 업데이트 무시")
+--     end
+--   elseif message_id == hash("get_network_state") then
+--     -- 네트워크 상태 요청에 응답
+--     msg.post(sender, "network_state_response", {
+--       connected = _G.network_connected,
+--       session_id = _G.my_session_id,
+--       players = _G.players,
+--       room_available = _G.network_room ~= nil
+--     })
+--   elseif message_id == hash("disconnect") then
+--     -- 수동 연결 해제
+--     if _G.network_room then
+--       _G.network_room:leave()
+--     end
+--     cleanup_connection()
+--   elseif message_id == hash("reconnect") then
+--     -- 수동 재접속
+--     cleanup_connection()
+--     connect_to_server()
+--   elseif message_id == hash("send_custom_message") then
+--     -- 커스텀 메시지 전송
+--     if _G.network_room and _G.network_connected then
+--       _G.network_room:send(message.type or "custom", message.data or {})
+--     else
+--       print("네트워크에 연결되지 않음 - 커스텀 메시지 무시")
+--     end
+--   end
+-- end
+
+function final(self)
+  print("Global Network Manager 종료 중...")
+
+  if reconnect_timer then
+    timer.cancel(reconnect_timer)
+  end
+
+  if _G.network_room then
+    _G.network_room:leave()
+  end
+
+  cleanup_connection()
+  print("Global Network Manager 종료 완료")
+end
+
+-- 전역 헬퍼 함수들
+function _G.send_to_server(message_type, data)
+  if _G.network_room and _G.network_connected then
+    _G.network_room:send(message_type, data or {})
+    return true
+  end
+  return false
+end

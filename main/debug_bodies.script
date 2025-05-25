@@ -1,0 +1,145 @@
+local Colyseus = require "colyseus.sdk"
+
+-- 디버그 바디 상태
+local debug_bodies = {}
+local DEBUG_COLOR = vmath.vector4(0, 1, 0, 0.7) -- 초록색 (RGBA)
+local utils = require "main.utils"
+
+local room = nil
+
+function init(self)
+	-- 리스너 등록 (utils 모듈 사용)
+	local my_id = msg.url()
+	msg.post("main:/managers#global_network", "register_listener", { id = my_id })
+
+	-- 디버그 바디 초기화
+	debug_bodies = {}
+	self.debug_visible = true -- F1 토글용 플래그
+
+	msg.post(".", "acquire_input_focus")
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("network_connected") then
+
+		room = _G.network_room
+
+		-- 0.5초마다 디버그 바디 정보 요청
+		timer.delay(0.1, true, function()
+			if room and _G.network_connected then
+				room:send("get_debug_bodies", {})
+			end
+		end)
+
+		room:on_message("debug_bodies", function(message)
+			-- 디버그 바디 데이터 업데이트
+			if message and message.bodies and type(message.bodies) == "table" then
+				debug_bodies = message.bodies
+			end
+		end)
+
+	end
+end
+
+function on_input(self, action_id, action)
+	if action_id == hash("f1") and action.pressed then
+		self.debug_visible = not self.debug_visible
+		if room then
+			room:send("toggle_debug", { enabled = self.debug_visible })
+		end
+	end
+end
+
+function update(self, dt)
+	if self.debug_visible then
+		render_debug_bodies()
+	end
+end
+
+-- 디버그 바디 렌더링
+function render_debug_bodies()
+	if not debug_bodies or #debug_bodies == 0 then
+		return
+	end
+	
+	-- 모든 바디 렌더링
+	for i, body in ipairs(debug_bodies) do
+		if body and body.shape then
+			-- 사각형 렌더링
+			if body.shape == "rectangle" and body.width and body.height then
+				draw_rectangle(body)
+				-- 원 렌더링
+			elseif body.shape == "circle" and body.radius then
+				draw_circle(body)
+			end
+
+			-- 중심점 십자가 표시
+			draw_center_cross(body)
+		end
+	end
+end
+
+-- 사각형 그리기
+function draw_rectangle(body)
+	local half_w = body.width / 2
+	local half_h = body.height / 2
+
+	-- 네 개의 모서리 선 그리기
+	msg.post("@render:", "draw_line", {
+		start_point = vmath.vector3(body.x - half_w, body.y - half_h, 0),
+		end_point = vmath.vector3(body.x + half_w, body.y - half_h, 0),
+		color = DEBUG_COLOR
+	})
+	msg.post("@render:", "draw_line", {
+		start_point = vmath.vector3(body.x + half_w, body.y - half_h, 0),
+		end_point = vmath.vector3(body.x + half_w, body.y + half_h, 0),
+		color = DEBUG_COLOR
+	})
+	msg.post("@render:", "draw_line", {
+		start_point = vmath.vector3(body.x + half_w, body.y + half_h, 0),
+		end_point = vmath.vector3(body.x - half_w, body.y + half_h, 0),
+		color = DEBUG_COLOR
+	})
+	msg.post("@render:", "draw_line", {
+		start_point = vmath.vector3(body.x - half_w, body.y + half_h, 0),
+		end_point = vmath.vector3(body.x - half_w, body.y - half_h, 0),
+		color = DEBUG_COLOR
+	})
+end
+
+-- 원 그리기
+function draw_circle(body)
+	local segments = 16
+	local angle_step = 2 * math.pi / segments
+
+	for i = 0, segments - 1 do
+		local angle1 = i * angle_step
+		local angle2 = (i + 1) * angle_step
+		local x1 = body.x + body.radius * math.cos(angle1)
+		local y1 = body.y + body.radius * math.sin(angle1)
+		local x2 = body.x + body.radius * math.cos(angle2)
+		local y2 = body.y + body.radius * math.sin(angle2)
+
+		msg.post("@render:", "draw_line", {
+			start_point = vmath.vector3(x1, y1, 0),
+			end_point = vmath.vector3(x2, y2, 0),
+			color = DEBUG_COLOR
+		})
+	end
+end
+
+-- 중심점 십자가 그리기
+function draw_center_cross(body)
+	local cross_size = 5
+
+	msg.post("@render:", "draw_line", {
+		start_point = vmath.vector3(body.x - cross_size, body.y, 0),
+		end_point = vmath.vector3(body.x + cross_size, body.y, 0),
+		color = DEBUG_COLOR
+	})
+	msg.post("@render:", "draw_line", {
+		start_point = vmath.vector3(body.x, body.y - cross_size, 0),
+		end_point = vmath.vector3(body.x, body.y + cross_size, 0),
+		color = DEBUG_COLOR
+	})
+end

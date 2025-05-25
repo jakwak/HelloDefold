@@ -1,39 +1,40 @@
 -- 움직임 관련 로직
 go.property("lerp_speed", 0.2) -- 보간 속도 조절용 프로퍼티
 go.property("start_x", 480) -- 가운데 위에서 시작하기 위한 X 좌표
-go.property("start_y", 550) -- 가운데 위에서 시작하기 위한 Y 좌표 (화면 위쪽)
+go.property("start_y", 350) -- 가운데에서 시작하기 위한 Y 좌표
 
 function init(self)
-    -- 처음에는 플레이어를 안 보이게 처리
-    msg.post("#sprite", "disable")
-    msg.post("#label", "disable")
+    -- 바로 플레이어를 보이게 처리
+    msg.post("#sprite", "enable")
+    msg.post("#label", "enable")
     
-    -- 초기 위치 저장 (화면 밖 설정)
-    self.initial_pos = vmath.vector3(-100, -100, 0) -- 화면 밖
+    -- 초기 위치 설정 (바로 시작 위치에 표시)
+    self.initial_pos = vmath.vector3(self.start_x, self.start_y, 0)
     self.target_pos = self.initial_pos
-    self.final_pos = vmath.vector3(self.start_x, self.start_y, 0) -- 최종 시작 위치
-    self.is_controllable = false
     self.received_first_position = false
-    self.visible = false
+    self.visible = true
     
-    -- 물리 바디 비활성화
-    msg.post("#collisionobject", "disable")
+    -- 물리 바디 활성화
+    msg.post("#collisionobject", "enable")
     
-    -- 초기 시작 위치에 강제로 고정 (화면 밖)
+    -- 초기 시작 위치에 즉시 배치
     go.set_position(self.initial_pos)
+    
+    -- 속도 초기화
+    msg.post("#collisionobject", "set_linear_velocity", {
+        linear_velocity = vmath.vector3(0, 0, 0)
+    })
+    
+    -- 플레이어 준비 완료 알림
+    timer.delay(0.1, false, function()
+        msg.post("#player2_network", "position_ready", {
+            x = self.start_x,
+            y = self.start_y
+        })
+    end)
 end
 
 function update(self, dt)
-    -- 표시 상태가 아니면 업데이트 중단
-    if not self.visible then
-        return
-    end
-    
-    -- 첫 위치 데이터를 받기 전에는 움직임 처리하지 않음
-    if not self.received_first_position then
-        return
-    end
-
     -- 현재 위치와 목표 위치 사이를 부드럽게 보간
     if self.target_pos then
         local current_pos = go.get_position()
@@ -47,52 +48,32 @@ function update(self, dt)
 end
 
 function on_message(self, message_id, message, sender)
-    if message_id == hash("update_position") then
-        -- 첫 위치 데이터를 받은 경우
+    if message_id == hash("show_player") then
+        -- player2.script에서 바로 플레이어 표시 요청
+        print("Player2 showing immediately at position:", message.x, message.y)
+        go.set_position(vmath.vector3(message.x, message.y, 0))
+        self.target_pos = vmath.vector3(message.x, message.y, 0)
+        
+        -- 이미 표시되어 있지만 확실히 하기 위해
+        msg.post("#sprite", "enable")
+        msg.post("#label", "enable")
+        self.visible = true
+        
+        -- 물리 활성화
+        msg.post("#collisionobject", "enable")
+        
+    elseif message_id == hash("update_position") then
+        -- 위치 업데이트 (isControllable 제거)
+        self.target_pos = vmath.vector3(message.x, message.y, 0)
+        
         if not self.received_first_position then
             self.received_first_position = true
-            
-            -- 서버 위치 저장
-            self.server_pos = vmath.vector3(message.x, message.y, 0)
-            
-            -- 즉시 위치 설정 (지연 없이)
-            print("Player2 showing at position:", message.x, message.y)
+            -- 서버에서 첫 위치를 받으면 즉시 이동
             go.set_position(vmath.vector3(message.x, message.y, 0))
-            self.target_pos = vmath.vector3(message.x, message.y, 0)
-            self.final_pos = vmath.vector3(message.x, message.y, 0)
-            
-            -- 플레이어 표시
-            msg.post("#sprite", "enable")
-            msg.post("#label", "enable")
-            self.visible = true
-            
-            -- 물리 활성화
-            msg.post("#collisionobject", "enable")
-            
-            -- 속도 초기화
-            msg.post("#collisionobject", "set_linear_velocity", {
-                linear_velocity = vmath.vector3(0, 0, 0)
-            })
-            
-            -- 서버에 현재 위치 전송
-            msg.post("#player2_network", "position_ready", {
-                x = message.x,
-                y = message.y
-            })
-        else
-            -- 이후 위치 업데이트 (보이게 된 이후에만 적용)
-            if self.visible then
-                self.target_pos = vmath.vector3(message.x, message.y, 0)
-            end
         end
         
-        if message.is_controllable ~= nil then
-            self.is_controllable = message.is_controllable
-        end
-    end
-    
-    -- 물리 속도 초기화 메시지
-    if message_id == hash("reset_velocity") then
+    elseif message_id == hash("reset_velocity") then
+        -- 물리 속도 초기화
         msg.post("#collisionobject", "set_linear_velocity", {
             linear_velocity = vmath.vector3(0, 0, 0)
         })

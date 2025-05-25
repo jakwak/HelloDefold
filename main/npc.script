@@ -1,0 +1,68 @@
+local utils = require "main.utils"
+
+function init(self)
+	self.pos = vmath.vector3(0, 0, 0)
+end
+
+function final(self)
+	-- Add finalization code here
+	-- Learn more: https://defold.com/manuals/script/
+	-- Remove this function if not needed
+end
+
+function update(self, dt)
+	-- Add update code here
+	-- Learn more: https://defold.com/manuals/script/
+	-- Remove this function if not needed
+end
+
+function fixed_update(self, dt)
+	-- This function is called if 'Fixed Update Frequency' is enabled in the Engine section of game.project
+	-- Can be coupled with fixed updates of the physics simulation if 'Use Fixed Timestep' is enabled in
+	-- Physics section of game.project
+	-- Add update code here
+	-- Learn more: https://defold.com/manuals/script/
+	-- Remove this function if not needed
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("set_npc_info") then
+		if message.id then
+			self.npc_id = tostring(message.id)
+		end
+		if message.size then
+			self.size = message.size
+			go.set("#sprite", "scale", vmath.vector3(self.size/32 * 8, self.size/32 * 8, 1))
+		end
+		if message.color then
+			self.color = message.color
+			go.set("#sprite", "tint", utils.hex_to_v4(tostring(self.color)))
+		end
+		if message.x then
+			self.pos.x = message.x
+			go.set_position(vmath.vector3(self.pos.x, self.pos.y, 0))
+		end
+		if message.y then
+			self.pos.y = message.y
+			go.set_position(vmath.vector3(self.pos.x, self.pos.y, 0))
+		end
+	end
+end
+
+function on_input(self, action_id, action)
+	-- Add input-handling code here. The game object this script is attached to
+	-- must have acquired input focus:
+	--
+	--    msg.post(".", "acquire_input_focus")
+	--
+	-- All mapped input bindings will be received. Mouse and touch input will
+	-- be received regardless of where on the screen it happened.
+	-- Learn more: https://defold.com/manuals/input/
+	-- Remove this function if not needed
+end
+
+function on_reload(self)
+	-- Add reload-handling code here
+	-- Learn more: https://defold.com/manuals/hot-reload/
+	-- Remove this function if not needed
+end

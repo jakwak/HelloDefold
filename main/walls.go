@@ -1,7 +1,3 @@
-components {
-  id: "wall_script"
-  component: "/main/walls.script"
-}
 embedded_components {
   id: "top_wall"
   type: "sprite"

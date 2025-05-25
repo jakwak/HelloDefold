@@ -1,0 +1,47 @@
+local Colyseus = require "colyseus.sdk"
+local utils    = require "main.utils"
+
+local room     = nil
+
+function init(self)
+	local my_id = msg.url()
+	msg.post("main:/managers#global_network", "register_listener", { id = my_id })
+	self.npc_factory_url = msg.url(nil, go.get_id(), "npc_factory")
+	self.player_factory_url = msg.url(nil, go.get_id(), "player_factory")
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("network_connected") and room == nil then
+		room = _G.network_room
+
+		local callbacks = Colyseus.callbacks(room)
+
+		callbacks:on_add("players", function(player, session_id)
+			if session_id == room.session_id then
+				local obj = factory.create(self.player_factory_url, vmath.vector3(player.x, player.y, 0))
+				msg.post(obj, "set_player_info", { username = player.username, size = player.size, color = player.color })
+			end
+		end)
+
+		callbacks:on_add("npcs", function(npc, session_id)
+			local obj = factory.create(self.npc_factory_url, vmath.vector3(npc.x, npc.y, 0))
+			msg.post(obj, "set_npc_info", { id = npc.id, size = npc.size, color = npc.color })
+			callbacks:listen(npc, "x", function(cur_val, prev_val)
+				msg.post(obj, "set_npc_info", { x = cur_val })
+			end)
+			callbacks:listen(npc, "y", function(cur_val, prev_val)
+				msg.post(obj, "set_npc_info", { y = cur_val })
+			end)
+		end)
+
+		-- 1초 간격으로 npc_factory 3개 생성 (위치는 랜덤)
+		-- for i = 1, 3 do
+		-- 	timer.delay(i, false, function()
+		-- 		local x = math.random(100, 900)
+		-- 		local y = math.random(100, 600)
+		-- 		local npc_pos = vmath.vector3(x, y, 0)
+		-- 		factory.create("#npc_factory", npc_pos, nil, { start_pos = npc_pos }, 1)
+		-- 	end)
+		-- end
+	end
+end
