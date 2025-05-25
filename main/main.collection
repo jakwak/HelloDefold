@@ -41,5 +41,11 @@ embedded_instances {
   "  data: \"prototype: \\\"/main/player.go\\\"\\n"
   "\"\n"
   "}\n"
+  "embedded_components {\n"
+  "  id: \"others_factory\"\n"
+  "  type: \"factory\"\n"
+  "  data: \"prototype: \\\"/main/others.go\\\"\\n"
+  "\"\n"
+  "}\n"
   ""
 }

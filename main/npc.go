@@ -1,11 +1,6 @@
 components {
   id: "npc"
   component: "/main/npc.script"
-  properties {
-    id: "id"
-    value: "npc_1"
-    type: PROPERTY_TYPE_HASH
-  }
 }
 embedded_components {
   id: "sprite"
