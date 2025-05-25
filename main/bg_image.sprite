@@ -1,6 +1,6 @@
-default_animation: "anim"
+default_animation: "preview"
 material: "/builtins/materials/sprite.material"
 textures {
   sampler: "texture_sampler"
-  texture: "/assets/test.tilesource"
+  texture: "/assets/test.atlas"
 }

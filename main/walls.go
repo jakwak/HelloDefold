@@ -3,13 +3,18 @@ embedded_components {
   type: "sprite"
   data: "default_animation: \"wall_horizontal\"\n"
   "material: \"/builtins/materials/sprite.material\"\n"
+  "size {\n"
+  "  x: 2000.0\n"
+  "  y: 20.0\n"
+  "}\n"
+  "size_mode: SIZE_MODE_MANUAL\n"
   "textures {\n"
   "  sampler: \"texture_sampler\"\n"
   "  texture: \"/assets/images/walls/walls.atlas\"\n"
   "}\n"
   ""
   position {
-    x: 480.0
+    x: 1000.0
     y: 10.0
   }
 }
@@ -18,14 +23,19 @@ embedded_components {
   type: "sprite"
   data: "default_animation: \"wall_horizontal\"\n"
   "material: \"/builtins/materials/sprite.material\"\n"
+  "size {\n"
+  "  x: 2000.0\n"
+  "  y: 20.0\n"
+  "}\n"
+  "size_mode: SIZE_MODE_MANUAL\n"
   "textures {\n"
   "  sampler: \"texture_sampler\"\n"
   "  texture: \"/assets/images/walls/walls.atlas\"\n"
   "}\n"
   ""
   position {
-    x: 480.0
-    y: 630.0
+    x: 1000.0
+    y: 1990.0
   }
 }
 embedded_components {
@@ -33,6 +43,11 @@ embedded_components {
   type: "sprite"
   data: "default_animation: \"wall_vertical\"\n"
   "material: \"/builtins/materials/sprite.material\"\n"
+  "size {\n"
+  "  x: 20.0\n"
+  "  y: 2000.0\n"
+  "}\n"
+  "size_mode: SIZE_MODE_MANUAL\n"
   "textures {\n"
   "  sampler: \"texture_sampler\"\n"
   "  texture: \"/assets/images/walls/walls.atlas\"\n"
@@ -40,7 +55,7 @@ embedded_components {
   ""
   position {
     x: 10.0
-    y: 320.0
+    y: 1000.0
   }
 }
 embedded_components {
@@ -48,13 +63,18 @@ embedded_components {
   type: "sprite"
   data: "default_animation: \"wall_vertical\"\n"
   "material: \"/builtins/materials/sprite.material\"\n"
+  "size {\n"
+  "  x: 20.0\n"
+  "  y: 2000.0\n"
+  "}\n"
+  "size_mode: SIZE_MODE_MANUAL\n"
   "textures {\n"
   "  sampler: \"texture_sampler\"\n"
   "  texture: \"/assets/images/walls/walls.atlas\"\n"
   "}\n"
   ""
   position {
-    x: 950.0
-    y: 320.0
+    x: 1990.0
+    y: 1000.0
   }
 }

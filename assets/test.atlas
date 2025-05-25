@@ -1,0 +1,4 @@
+images {
+  image: "/assets/Platformer Art Complete Pack/preview.png"
+}
+extrude_borders: 2
