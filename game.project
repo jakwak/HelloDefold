@@ -23,6 +23,7 @@ include_dev_tool = 1
 title = HelloDefold
 dependencies#0 = https://github.com/defold/extension-websocket/archive/master.zip
 dependencies#1 = https://github.com/colyseus/colyseus-defold/archive/master.zip
+dependencies#2 = https://github.com/britzl/defold-orthographic/archive/master.zip
 
 [websocket]
 debug = 0
