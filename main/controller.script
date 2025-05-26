@@ -6,8 +6,13 @@ local room = nil
 
 function init(self)
 	msg.post(".", "acquire_input_focus") -- 입력 포커스 획득
-	self.target_dir = vmath.vector3(0, 0, 0)
+	self.target_dir = vmath.vector3(0, 1, 0) -- 위쪽(y+)을 기본 방향으로!
 	self.target_pos = nil
+	self.current_angle = math.pi / 2 -- 90도(라디안)로 초기화
+
+	self.sprite_id = factory.create("#factory", vmath.vector3(0, 0, 0))
+	go.set_parent(self.sprite_id, go.get_id(), false)  -- false = 상대좌표 유지
+	go.set_rotation(vmath.quat_rotation_z(self.current_angle), self.sprite_id)
 end
 
 function final(self)
@@ -21,6 +26,18 @@ function update(self, dt)
 		local current_pos = go.get_position()
 		local new_pos = vmath.lerp(0.1, current_pos, self.target_pos) -- 부드럽게 이동
 		go.set_position(new_pos)
+
+		-- 목표 각도 계산
+		local target_angle = math.atan2(self.target_dir.y, self.target_dir.x) - math.pi/2
+		-- 현재 각도와 목표 각도 사이를 slerp로 보간
+		-- 각도 wrap-around(2파이 넘는 문제) 보정
+		local function angle_lerp(a, b, t)
+			local diff = (b - a + math.pi) % (2 * math.pi) - math.pi
+			return a + diff * t
+		end
+
+		self.current_angle = angle_lerp(self.current_angle, target_angle, 0.15) -- 0.1~0.2 정도가 자연스러움
+		go.set_rotation(vmath.quat_rotation_z(self.current_angle), self.sprite_id)
 	end
 
 	if room == nil then

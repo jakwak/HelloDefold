@@ -41,3 +41,9 @@ embedded_components {
     y: 0.5
   }
 }
+embedded_components {
+  id: "factory"
+  type: "factory"
+  data: "prototype: \"/main/airplane.go\"\n"
+  ""
+}

@@ -1,0 +1,16 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "defold",
+			"action": "run",
+			"configuration": "debug",
+			"platform": "current",
+			"problemMatcher": [
+				"$defold-run"
+			],
+			"label": "defold: run",
+			"detail": "Run the project"
+		}
+	]
+}

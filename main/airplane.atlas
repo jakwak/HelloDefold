@@ -1,0 +1,8 @@
+animations {
+  id: "default"
+  images {
+    image: "/main/airplane.png"
+  }
+  playback: PLAYBACK_LOOP_FORWARD
+}
+extrude_borders: 2

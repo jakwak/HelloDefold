@@ -1,6 +1,6 @@
-default_animation: "preview"
+default_animation: "default"
 material: "/builtins/materials/sprite.material"
 textures {
   sampler: "texture_sampler"
-  texture: "/main/bg_image.atlas"
+  texture: "/main/airplane.atlas"
 }
