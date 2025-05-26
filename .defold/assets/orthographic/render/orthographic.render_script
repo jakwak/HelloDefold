@@ -71,12 +71,4 @@ function on_message(self, message_id, message)
 	if message_id == CLEAR_COLOR then
 		self.clear_color = message.color
 	end
-
-	if message_id == hash("draw_line") then
-		local sp = message.start_point
-		local ep = message.end_point
-		local color = message.color or vmath.vector4(1, 1, 1, 1)
-		render.set_color(color)
-		render.draw_line(sp, ep)
-	end
 end

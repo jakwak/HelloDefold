@@ -3,6 +3,10 @@ instances {
   id: "walls"
   prototype: "/main/walls.go"
 }
+instances {
+  id: "camera"
+  prototype: "/orthographic/camera.go"
+}
 scale_along_z: 0
 embedded_instances {
   id: "managers"

@@ -86,6 +86,9 @@ function on_message(self, message_id, message, sender)
   if message_id == hash("factory_created") and _G.network_connected then
     msg.post(sender, "network_connected")
   end
+  if message_id == hash("__playground_message_types") then
+    print("playground_message_types: ", message)
+  end
 end
 
 -- function setup_room_events(room)
