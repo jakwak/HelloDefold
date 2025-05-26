@@ -11,9 +11,7 @@ function final(self)
 end
 
 function update(self, dt)
-	-- Add update code here
-	-- Learn more: https://defold.com/manuals/script/
-	-- Remove this function if not needed
+
 end
 
 function fixed_update(self, dt)
@@ -45,6 +43,12 @@ function on_message(self, message_id, message, sender)
 		if message.y then
 			self.pos.y = message.y
 			go.set_position(vmath.vector3(self.pos.x, self.pos.y, 0))
+		end
+		if message.dirx then
+			self.dirx = message.dirx
+		end
+		if message.diry then
+			self.diry = message.diry
 		end
 	end
 end
