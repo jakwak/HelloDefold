@@ -1,7 +1,23 @@
 local utils = require "main.utils"
 
 function init(self)
-	self.pos = vmath.vector3(0, 0, 0)
+	self.target_dir = vmath.vector3(0, 1, 0)
+	self.target_pos = nil
+	self.current_angle = math.pi / 2
+
+	self.sprite_id = factory.create("#factory", vmath.vector3(0, 0, 0))
+	go.set_parent(self.sprite_id, go.get_id(), false)
+	go.set_rotation(vmath.quat_rotation_z(self.current_angle), self.sprite_id)
+	msg.post(msg.url("#sprite"), "disable")
+	msg.post(msg.url(nil, self.sprite_id, "airplane_sprite"), "disable")
+
+	self.spawn_time = 0
+	self.fadein_time = 1.0 -- 1초 후에 페이드인 시작
+	self.alpha = 0
+	go.set(msg.url(nil, self.sprite_id, "airplane2_sprite"), "tint.w", self.alpha)
+
+	-- 색상 저장용 변수 추가
+	self.tint_color = vmath.vector4(1,1,1,1) -- 기본값
 end
 
 function final(self)
@@ -11,7 +27,27 @@ function final(self)
 end
 
 function update(self, dt)
+	self.spawn_time = self.spawn_time + dt
 
+	if self.spawn_time >= self.fadein_time and self.alpha < 1 then
+		self.alpha = math.min(1, self.alpha + dt)
+		local col = vmath.vector4(self.tint_color.x, self.tint_color.y, self.tint_color.z, self.alpha)
+		go.set(msg.url(nil, self.sprite_id, "airplane2_sprite"), "tint", col)
+	end
+
+	if self.target_pos then
+		local current_pos = go.get_position()
+		local new_pos = vmath.lerp(0.1, current_pos, self.target_pos)
+		go.set_position(new_pos)
+
+		local target_angle = math.atan2(self.target_dir.y, self.target_dir.x) - math.pi/2
+		local function angle_lerp(a, b, t)
+			local diff = (b - a + math.pi) % (2 * math.pi) - math.pi
+			return a + diff * t
+		end
+		self.current_angle = angle_lerp(self.current_angle, target_angle, 0.15)
+		go.set_rotation(vmath.quat_rotation_z(self.current_angle), self.sprite_id)
+	end
 end
 
 function fixed_update(self, dt)
@@ -30,25 +66,30 @@ function on_message(self, message_id, message, sender)
 		end
 		if message.size then
 			self.size = message.size
-			go.set("#sprite", "scale", vmath.vector3(self.size/32 * 8, self.size/32 * 8, 1))
+			local scale_factor = 1.5
+			go.set(msg.url(nil, self.sprite_id, "airplane2_sprite"), "scale", vmath.vector3(self.size/32 * scale_factor, self.size/32 * scale_factor, 1))
 		end
 		if message.color then
 			self.color = message.color
-			go.set("#sprite", "tint", utils.hex_to_v4(tostring(self.color)))
+			local col = utils.hex_to_v4(tostring(self.color))
+			col.w = self.alpha -- 현재 알파값 유지
+			self.tint_color = col
+			go.set(msg.url(nil, self.sprite_id, "airplane2_sprite"), "tint", col)
 		end
 		if message.x then
-			self.pos.x = message.x
-			go.set_position(vmath.vector3(self.pos.x, self.pos.y, 0))
+			if not self.target_pos then
+				self.target_pos = go.get_position()
+			end
+			self.target_pos.x = message.x
 		end
 		if message.y then
-			self.pos.y = message.y
-			go.set_position(vmath.vector3(self.pos.x, self.pos.y, 0))
+			if not self.target_pos then
+				self.target_pos = go.get_position()
+			end
+			self.target_pos.y = message.y
 		end
-		if message.dirx then
-			self.dirx = message.dirx
-		end
-		if message.diry then
-			self.diry = message.diry
+		if message.dirx or message.diry then
+			self.target_dir = vmath.vector3(message.dirx or self.target_dir.x, message.diry or self.target_dir.y, 0)
 		end
 	end
 end

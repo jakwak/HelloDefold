@@ -13,7 +13,20 @@
   "Lua.diagnostics.disable": [
     "lowercase-global",
     "redefined-local",
-    "undefined-field"
+    "undefined-field",
+    "duplicate-doc-field",
+    "duplicate-set-field",
+    "missing-fields",
+    "invisible",
+    "param-type-mismatch",
+    "return-type-mismatch",
+    "need-check-nil",
+    "missing-parameter",
+    "cast-local-type",
+    "deprecated",
+    "undefined-global",
+    "undefined-doc-param",
+    "missing-return"
   ],
   "Lua.workspace.library": [
     "~/Library/Application Support/Code/User/globalStorage/astronachos.defold",

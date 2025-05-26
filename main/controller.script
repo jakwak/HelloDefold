@@ -16,6 +16,7 @@ function init(self)
 	
 	-- 큰 비행기 스프라이트 비활성화
 	msg.post(msg.url(nil, self.sprite_id, "airplane2_sprite"), "disable")
+	msg.post(msg.url("#sprite"), "disable")
 end
 
 function final(self)
