@@ -1,9 +1,21 @@
 local utils = require "main.utils"
 
-function init(self)
-	self.target_dir = vmath.vector3(0, 1, 0)
+local function init_fadein(self)
+	self.spawn_time = 0
+	self.fadein_time = 1.0 -- 1초 후에 페이드인 시작
+	self.alpha = 0
+	self.tint_color = vmath.vector4(1,1,1,1) -- 흰색으로 초기화
+	go.set(msg.url(nil, self.sprite_id, "airplane2_sprite"), "tint", vmath.vector4(1,1,1,0))
+end
+
+local function init_move(self)
 	self.target_pos = nil
 	self.current_angle = math.pi / 2
+	self.target_dir = vmath.vector3(0, 1, 0) -- 기본 방향 초기화
+end
+
+function init(self)
+	init_move(self)
 
 	self.sprite_id = factory.create("#factory", vmath.vector3(0, 0, 0))
 	go.set_parent(self.sprite_id, go.get_id(), false)
@@ -11,13 +23,7 @@ function init(self)
 	msg.post(msg.url("#sprite"), "disable")
 	msg.post(msg.url(nil, self.sprite_id, "airplane_sprite"), "disable")
 
-	self.spawn_time = 0
-	self.fadein_time = 1.0 -- 1초 후에 페이드인 시작
-	self.alpha = 0
-	go.set(msg.url(nil, self.sprite_id, "airplane2_sprite"), "tint.w", self.alpha)
-
-	-- 색상 저장용 변수 추가
-	self.tint_color = vmath.vector4(1,1,1,1) -- 기본값
+	init_fadein(self)
 end
 
 function final(self)
@@ -26,15 +32,15 @@ function final(self)
 	-- Remove this function if not needed
 end
 
-function update(self, dt)
-	self.spawn_time = self.spawn_time + dt
-
+local function fadein_update(self, dt)
 	if self.spawn_time >= self.fadein_time and self.alpha < 1 then
 		self.alpha = math.min(1, self.alpha + dt)
 		local col = vmath.vector4(self.tint_color.x, self.tint_color.y, self.tint_color.z, self.alpha)
 		go.set(msg.url(nil, self.sprite_id, "airplane2_sprite"), "tint", col)
 	end
+end
 
+local function move_update(self)
 	if self.target_pos then
 		local current_pos = go.get_position()
 		local new_pos = vmath.lerp(0.1, current_pos, self.target_pos)
@@ -48,6 +54,13 @@ function update(self, dt)
 		self.current_angle = angle_lerp(self.current_angle, target_angle, 0.15)
 		go.set_rotation(vmath.quat_rotation_z(self.current_angle), self.sprite_id)
 	end
+end
+
+function update(self, dt)
+	self.spawn_time = self.spawn_time + dt
+
+	fadein_update(self, dt)
+	move_update(self)
 end
 
 function fixed_update(self, dt)
@@ -88,8 +101,11 @@ function on_message(self, message_id, message, sender)
 			end
 			self.target_pos.y = message.y
 		end
-		if message.dirx or message.diry then
-			self.target_dir = vmath.vector3(message.dirx or self.target_dir.x, message.diry or self.target_dir.y, 0)
+		if message.dirx then
+			self.target_dir.x = message.dirx
+		end
+		if message.diry then
+			self.target_dir.y = message.diry * -1
 		end
 	end
 end

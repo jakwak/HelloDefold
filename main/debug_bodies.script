@@ -24,7 +24,7 @@ function on_message(self, message_id, message, sender)
 
 		room = _G.network_room
 
-		-- 0.5초마다 디버그 바디 정보 요청
+		-- 0.1초마다 디버그 바디 정보 요청
 		timer.delay(0.1, true, function()
 			if room and _G.network_connected then
 				room:send("get_debug_bodies", {})
@@ -34,10 +34,31 @@ function on_message(self, message_id, message, sender)
 		room:on_message("debug_bodies", function(message)
 			-- 디버그 바디 데이터 업데이트
 			if message and message.bodies and type(message.bodies) == "table" then
-				debug_bodies = message.bodies
+				-- debug_bodies = message.bodies
+				update_debug_bodies(message.bodies)
 			end
 		end)
 
+	end
+end
+
+function update_debug_bodies(new_bodies)
+	-- 1. 기존에 있던 body 중에서 더 이상 없는 것은 삭제
+	for id, obj in pairs(debug_bodies) do
+		if not new_bodies[id] then
+			debug_bodies[id] = nil
+		end
+	end
+
+	-- 2. 새로 추가된 body는 생성
+	for _, body in pairs(new_bodies) do
+		local body_id = body.id
+		if not debug_bodies[body_id] then
+			debug_bodies[body_id] = { data = body }
+		else
+			-- 위치 등 정보 갱신
+			debug_bodies[body_id].data = body
+		end
 	end
 end
 
@@ -63,18 +84,18 @@ function render_debug_bodies()
 	end
 	
 	-- 모든 바디 렌더링
-	for i, body in ipairs(debug_bodies) do
-		if body and body.shape then
+	for id, body in pairs(debug_bodies) do
+		if body and body.data and body.data.shape then
 			-- 사각형 렌더링
-			if body.shape == "rectangle" and body.width and body.height then
-				draw_rectangle(body)
+			if body.data.shape == "rectangle" and body.data.width and body.data.height then
+				draw_rectangle(body.data)
 				-- 원 렌더링
-			elseif body.shape == "circle" and body.radius then
-				draw_circle(body)
+			elseif body.data.shape == "circle" and body.data.radius then
+				draw_circle(body.data)
 			end
 
 			-- 중심점 십자가 표시
-			draw_center_cross(body)
+			draw_center_cross(body.data)
 		end
 	end
 end
