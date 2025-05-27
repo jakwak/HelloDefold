@@ -21,9 +21,7 @@ end
 
 function on_message(self, message_id, message, sender)
 	if message_id == hash("network_connected") then
-
 		room = _G.network_room
-
 		-- 0.1초마다 디버그 바디 정보 요청
 		timer.delay(0.1, true, function()
 			if room and _G.network_connected then
@@ -34,31 +32,16 @@ function on_message(self, message_id, message, sender)
 		room:on_message("debug_bodies", function(message)
 			-- 디버그 바디 데이터 업데이트
 			if message and message.bodies and type(message.bodies) == "table" then
-				-- debug_bodies = message.bodies
-				update_debug_bodies(message.bodies)
+				local new_bodies = {}
+        for _, body in ipairs(message.bodies) do
+            -- 유효한 바디만 추가
+            if body and body.shape and body.x and body.y then
+                table.insert(new_bodies, body)
+            end
+        end
+        debug_bodies = new_bodies
 			end
 		end)
-
-	end
-end
-
-function update_debug_bodies(new_bodies)
-	-- 1. 기존에 있던 body 중에서 더 이상 없는 것은 삭제
-	for id, obj in pairs(debug_bodies) do
-		if not new_bodies[id] then
-			debug_bodies[id] = nil
-		end
-	end
-
-	-- 2. 새로 추가된 body는 생성
-	for _, body in pairs(new_bodies) do
-		local body_id = body.id
-		if not debug_bodies[body_id] then
-			debug_bodies[body_id] = { data = body }
-		else
-			-- 위치 등 정보 갱신
-			debug_bodies[body_id].data = body
-		end
 	end
 end
 
@@ -72,30 +55,26 @@ function on_input(self, action_id, action)
 end
 
 function update(self, dt)
-	if self.debug_visible then
+	if self.debug_visible and room and _G.network_connected then
 		render_debug_bodies()
 	end
 end
 
 -- 디버그 바디 렌더링
 function render_debug_bodies()
-	if not debug_bodies or #debug_bodies == 0 then
+	if not debug_bodies or type(debug_bodies) ~= "table" then
 		return
 	end
-	
-	-- 모든 바디 렌더링
-	for id, body in pairs(debug_bodies) do
-		if body and body.data and body.data.shape then
-			-- 사각형 렌더링
-			if body.data.shape == "rectangle" and body.data.width and body.data.height then
-				draw_rectangle(body.data)
-				-- 원 렌더링
-			elseif body.data.shape == "circle" and body.data.radius then
-				draw_circle(body.data)
-			end
 
-			-- 중심점 십자가 표시
-			draw_center_cross(body.data)
+	-- 모든 바디 렌더링 (ipairs로 순차적 배열 순회)
+	for _, body in ipairs(debug_bodies) do
+		if body and body.shape and body.x and body.y then
+			if body.shape == "rectangle" and body.width and body.height then
+				draw_rectangle(body)
+			elseif body.shape == "circle" and body.radius then
+				draw_circle(body)
+			end
+			draw_center_cross(body)
 		end
 	end
 end
@@ -163,4 +142,11 @@ function draw_center_cross(body)
 		end_point = vmath.vector3(body.x, body.y + cross_size, 0),
 		color = DEBUG_COLOR
 	})
+end
+
+function final(self)
+	if room then
+		room = nil
+	end
+	debug_bodies = {}
 end
