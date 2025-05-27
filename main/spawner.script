@@ -67,7 +67,7 @@ function on_message(self, message_id, message, sender)
 		callbacks:on_add("bullets", function(bullet, _)
 			local obj = factory.create(self.bullet_factory_url, vmath.vector3(bullet.x, bullet.y, 0))
 			self.spawned_objects[bullet.id] = obj
-			msg.post(obj, "set_bullet_info", { id = bullet.id, x = bullet.x, y = bullet.y, dirx = bullet.dirx, diry = bullet.diry, power = bullet.power, velocity = bullet.velocity, owner_id = bullet.owner_id })
+			-- msg.post(obj, "set_bullet_info", { id = bullet.id, x = bullet.x, y = bullet.y, dirx = bullet.dirx, diry = bullet.diry, power = bullet.power, velocity = bullet.velocity, owner_id = bullet.owner_id })
 			print("현재 스폰된 오브젝트 개수 on_add:", utils.table_size(self.spawned_objects))
 		end)
 
@@ -88,23 +88,13 @@ function on_message(self, message_id, message, sender)
 			end
 		end)
 
-		callbacks:on_remove("bullets", function(bullet, _)
+		callbacks:on_remove("bullets", function(bullet, bullet_id)
 			local obj = self.spawned_objects[bullet.id]
 			if obj then
 				go.delete(obj)
 				self.spawned_objects[bullet.id] = nil
 			end
-			print("현재 스폰된 오브젝트 개수 on_remove:", utils.table_size(self.spawned_objects))
 		end)
-
-		room:on_message("bullet_removed", function(bullet)
-			local obj = self.spawned_objects[bullet.id]
-			if obj then
-				go.delete(obj)
-				self.spawned_objects[bullet.id] = nil
-			end
-			print("현재 스폰된 오브젝트 개수 on_remove:", utils.table_size(self.spawned_objects))
-		end)
-
+		
 	end
 end
