@@ -2,6 +2,11 @@ local utils = require "main.utils"
 
 function init(self)
   -- 필요한 초기화
+  self.x = 0
+  self.y = 0
+  self.username = ""
+  self.size = 0
+  self.color = ""
 end
 
 function update(self, dt)

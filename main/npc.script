@@ -83,8 +83,7 @@ function on_message(self, message_id, message, sender)
 			go.set(msg.url(nil, self.sprite_id, "airplane2_sprite"), "scale", vmath.vector3(self.size/32 * scale_factor, self.size/32 * scale_factor, 1))
 		end
 		if message.color then
-			self.color = message.color
-			local col = utils.hex_to_v4(tostring(self.color))
+			local col = utils.hex_to_v4(tostring(message.color))
 			col.w = self.alpha -- 현재 알파값 유지
 			self.tint_color = col
 			go.set(msg.url(nil, self.sprite_id, "airplane2_sprite"), "tint", col)
