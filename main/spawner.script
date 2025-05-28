@@ -85,7 +85,6 @@ function on_message(self, message_id, message, sender)
 		end)
 
 		callbacks:on_remove("players", function(_, session_id)
-			print("on_remove players: ", session_id)
 			local obj = self.spawned_objects[session_id]
 			if obj then
 				go.delete(obj)
@@ -102,7 +101,6 @@ function on_message(self, message_id, message, sender)
 		end)
 
 		callbacks:on_remove("bullets", function(bullet, bullet_id)
-			print("on_remove bullets: ", bullet_id)
 			local obj = self.spawned_objects[bullet.id]
 			if obj then
 				go.delete(obj)

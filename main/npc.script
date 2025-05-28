@@ -22,6 +22,8 @@ function init(self)
 	go.set_rotation(vmath.quat_rotation_z(self.current_angle), self.sprite_id)
 	msg.post(msg.url("#sprite"), "disable")
 	msg.post(msg.url(nil, self.sprite_id, "airplane_sprite"), "disable")
+	msg.post(msg.url(nil, self.sprite_id, "airplane3_sprite"), "disable")
+	msg.post(msg.url(nil, self.sprite_id, "airplane4_sprite"), "disable")
 
 	init_fadein(self)
 end
@@ -61,15 +63,6 @@ function update(self, dt)
 
 	fadein_update(self, dt)
 	move_update(self)
-end
-
-function fixed_update(self, dt)
-	-- This function is called if 'Fixed Update Frequency' is enabled in the Engine section of game.project
-	-- Can be coupled with fixed updates of the physics simulation if 'Use Fixed Timestep' is enabled in
-	-- Physics section of game.project
-	-- Add update code here
-	-- Learn more: https://defold.com/manuals/script/
-	-- Remove this function if not needed
 end
 
 function on_message(self, message_id, message, sender)

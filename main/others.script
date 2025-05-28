@@ -12,12 +12,15 @@ function init(self)
   self.current_angle = math.pi / 2  -- 90도(라디안)로 초기화
   self.target_dir = vmath.vector3(0, 1, 0)  -- 초기 방향
 
-  self.sprite_id = factory.create("#factory", vmath.vector3(0, 0, 0))
+  self.sprite_id = factory.create("#airplane_factory", vmath.vector3(0, 0, 0))
   go.set_parent(self.sprite_id, go.get_id(), false)  -- false = 상대좌표 유지
   go.set_rotation(vmath.quat_rotation_z(self.current_angle), self.sprite_id)
   
   -- 큰 비행기 스프라이트 비활성화
   msg.post(msg.url(nil, self.sprite_id, "airplane2_sprite"), "disable")
+  msg.post(msg.url(nil, self.sprite_id, "airplane3_sprite"), "disable")
+  msg.post(msg.url(nil, self.sprite_id, "airplane4_sprite"), "disable")
+  
   msg.post(msg.url("#sprite"), "disable")
 end
 

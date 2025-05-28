@@ -38,7 +38,7 @@ embedded_components {
   }
 }
 embedded_components {
-  id: "factory"
+  id: "airplane_factory"
   type: "factory"
   data: "prototype: \"/main/airplane.go\"\n"
   ""

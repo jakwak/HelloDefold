@@ -10,12 +10,15 @@ function init(self)
 	self.target_pos = nil
 	self.current_angle = math.pi / 2 -- 90도(라디안)로 초기화
 
-	self.sprite_id = factory.create("#factory", vmath.vector3(0, 0, 0))
+	self.sprite_id = factory.create("#airplane_factory", vmath.vector3(0, 0, 0))
 	go.set_parent(self.sprite_id, go.get_id(), false)  -- false = 상대좌표 유지
 	go.set_rotation(vmath.quat_rotation_z(self.current_angle), self.sprite_id)
 	
 	-- 큰 비행기 스프라이트 비활성화
 	msg.post(msg.url(nil, self.sprite_id, "airplane2_sprite"), "disable")
+	msg.post(msg.url(nil, self.sprite_id, "airplane3_sprite"), "disable")
+	msg.post(msg.url(nil, self.sprite_id, "airplane4_sprite"), "disable")
+	
 	msg.post(msg.url("#sprite"), "disable")
 
 	msg.post("camera", camera.MSG_BOUNDS, {
@@ -24,12 +27,6 @@ function init(self)
 		left = 0,
 		bottom = 0
 	})
-end
-
-function final(self)
-	-- Add finalization code here
-	-- Learn more: https://defold.com/manuals/script/
-	-- Remove this function if not needed
 end
 
 function update(self, dt)
