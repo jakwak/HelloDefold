@@ -2,6 +2,10 @@ components {
   id: "bullet"
   component: "/main/bullet.script"
 }
+components {
+  id: "explode"
+  component: "/main/explode.particlefx"
+}
 embedded_components {
   id: "sprite"
   type: "sprite"
@@ -17,4 +21,7 @@ embedded_components {
   "  texture: \"/builtins/graphics/particle_blob.tilesource\"\n"
   "}\n"
   ""
+  scale {
+    y: 0.5
+  }
 }
