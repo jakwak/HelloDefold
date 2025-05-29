@@ -32,3 +32,9 @@ socket_timeout = 10000000
 [physics]
 gravity_y = 0.0
 
+[sprite]
+max_count = 1024
+
+[particle_fx]
+max_count = 512
+

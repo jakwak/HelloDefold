@@ -72,7 +72,7 @@ function on_message(self, message_id, message, sender)
 		end
 		if message.size then
 			self.size = message.size
-			local scale_factor = 1.5
+			local scale_factor = 0.75
 			go.set(msg.url(nil, self.sprite_id, "airplane2_sprite"), "scale", vmath.vector3(self.size/32 * scale_factor, self.size/32 * scale_factor, 1))
 		end
 		if message.color then
