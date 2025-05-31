@@ -97,7 +97,6 @@ end
 local function on_remove_bullet(self, bullet, bullet_id)
 	local obj = self.spawned_objects[bullet.id]
 	if obj then
-		print("on_remove bullets: ", bullet_id, bullet.id)
 		if go.exists(obj) then
 			-- 페이드 아웃 애니메이션 추가
 			local sprite = msg.url(nil, obj, "sprite")
@@ -110,7 +109,6 @@ local function on_remove_bullet(self, bullet, bullet_id)
 			else
 				go.delete(obj)
 			end
-			print("Successfully deleted object: ", bullet.id)
 		else
 			print("Object already invalid: ", bullet.id)
 		end
