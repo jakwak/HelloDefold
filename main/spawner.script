@@ -80,42 +80,59 @@ end
 
 local function on_remove_player(self, _, session_id)
 	local obj = self.spawned_objects[session_id]
-	if obj then
-		go.delete(obj)
-		self.spawned_objects[session_id] = nil
+	if not obj then
+		return
+	end
+	
+	-- 즉시 spawned_objects에서 제거 (중복 호출 방지)
+	self.spawned_objects[session_id] = nil
+	
+	-- 객체 존재 확인 후 안전한 삭제
+	if go.exists(obj) then
+		pcall(function()
+			go.delete(obj)
+		end)
 	end
 end
 
 local function on_remove_npc(self, npc, _)
 	local obj = self.spawned_objects[npc.id]
-	if obj then
-		go.delete(obj)
-		self.spawned_objects[npc.id] = nil
+	if not obj then
+		return
+	end
+	
+	-- 즉시 spawned_objects에서 제거 (중복 호출 방지)
+	self.spawned_objects[npc.id] = nil
+	
+	-- 객체 존재 확인 후 안전한 삭제
+	if go.exists(obj) then
+		pcall(function()
+			go.delete(obj)
+		end)
 	end
 end
 
 local function on_remove_bullet(self, bullet, bullet_id)
 	local obj = self.spawned_objects[bullet.id]
-	if obj then
-		if go.exists(obj) then
-			-- 페이드 아웃 애니메이션 추가
-			local sprite = msg.url(nil, obj, "sprite")
-			if sprite then
-				-- 페이드 아웃 애니메이션 설정
-				go.animate(sprite, "tint.w", go.PLAYBACK_ONCE_FORWARD, 0, go.EASING_LINEAR, 0.1, 0, function()
-					-- 애니메이션이 끝나면 게임 오브젝트 삭제
-					go.delete(obj)
-				end)
-			else
-				go.delete(obj)
-			end
-		else
-			print("Object already invalid: ", bullet.id)
-		end
-		self.spawned_objects[bullet.id] = nil
-	else
+	if not obj then
 		print("No object found for bullet: ", bullet.id)
+		return
 	end
+	
+	-- 객체 존재 확인
+	if not go.exists(obj) then
+		print("Object already deleted: ", bullet.id)
+		self.spawned_objects[bullet.id] = nil
+		return
+	end
+	
+	-- 즉시 spawned_objects에서 제거 (중복 호출 방지)
+	self.spawned_objects[bullet.id] = nil
+	
+	-- 안전한 삭제
+	pcall(function()
+		go.delete(obj)
+	end)
 end
 
 function init(self)
