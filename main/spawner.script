@@ -83,10 +83,10 @@ local function on_remove_player(self, _, session_id)
 	if not obj then
 		return
 	end
-	
+
 	-- 즉시 spawned_objects에서 제거 (중복 호출 방지)
 	self.spawned_objects[session_id] = nil
-	
+
 	-- 객체 존재 확인 후 안전한 삭제
 	if go.exists(obj) then
 		pcall(function()
@@ -100,10 +100,10 @@ local function on_remove_npc(self, npc, _)
 	if not obj then
 		return
 	end
-	
+
 	-- 즉시 spawned_objects에서 제거 (중복 호출 방지)
 	self.spawned_objects[npc.id] = nil
-	
+
 	-- 객체 존재 확인 후 안전한 삭제
 	if go.exists(obj) then
 		pcall(function()
@@ -118,17 +118,17 @@ local function on_remove_bullet(self, bullet, bullet_id)
 		print("No object found for bullet: ", bullet.id)
 		return
 	end
-	
+
 	-- 객체 존재 확인
 	if not go.exists(obj) then
 		print("Object already deleted: ", bullet.id)
 		self.spawned_objects[bullet.id] = nil
 		return
 	end
-	
+
 	-- 즉시 spawned_objects에서 제거 (중복 호출 방지)
 	self.spawned_objects[bullet.id] = nil
-	
+
 	-- 안전한 삭제
 	pcall(function()
 		go.delete(obj)
