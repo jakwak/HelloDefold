@@ -160,7 +160,11 @@ function on_message(self, message_id, message, sender)
 			on_add_npc(self, npc, _, callbacks)
 		end)
 
-		callbacks:on_add("bullets", function(bullet, _)
+		callbacks:on_add("playerBullets", function(bullet, _)
+			on_add_bullet(self, bullet, _, callbacks)
+		end)
+
+		callbacks:on_add("npcBullets", function(bullet, _)
 			on_add_bullet(self, bullet, _, callbacks)
 		end)
 
@@ -172,7 +176,11 @@ function on_message(self, message_id, message, sender)
 			on_remove_npc(self, npc, _)
 		end)
 
-		callbacks:on_remove("bullets", function(bullet, bullet_id)
+		callbacks:on_remove("playerBullets", function(bullet, bullet_id)
+			on_remove_bullet(self, bullet, bullet_id)
+		end)
+
+		callbacks:on_remove("npcBullets", function(bullet, bullet_id)
 			on_remove_bullet(self, bullet, bullet_id)
 		end)
 	end

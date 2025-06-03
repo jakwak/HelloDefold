@@ -66,6 +66,12 @@ function update(self, dt)
 						end
 						self.target_pos.y = cur_val
 					end)
+					callbacks:listen(player, "dirx", function(cur_val, prev_val)
+						self.target_dir.x = cur_val
+					end)
+					callbacks:listen(player, "diry", function(cur_val, prev_val)
+						self.target_dir.y = cur_val
+					end)
 				end
 			end)
 		end
