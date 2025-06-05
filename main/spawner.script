@@ -38,7 +38,7 @@ end
 local function on_add_npc(self, npc, _, callbacks)
 	local obj = factory.create(self.npc_factory_url, vmath.vector3(npc.x, npc.y, 0))
 	self.spawned_objects[npc.id] = obj
-	msg.post(obj, "set_npc_info", { id = npc.id, size = npc.size, color = npc.color })
+	msg.post(obj, "set_npc_info", { id = npc.id, size = npc.size, color = npc.color, type = npc.type })
 
 	-- NPC 위치/방향 업데이트 리스너
 	callbacks:listen(npc, "x", function(cur_val, prev_val)

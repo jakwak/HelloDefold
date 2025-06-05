@@ -4,7 +4,7 @@ components {
 }
 components {
   id: "explode"
-  component: "/main/explode.particlefx"
+  component: "/main/assets/explode.particlefx"
 }
 embedded_components {
   id: "sprite"

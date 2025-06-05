@@ -2,10 +2,10 @@ local utils = require "main.utils"
 
 local function init_fadein(self)
 	self.spawn_time = 0
-	self.fadein_time = 1.0 -- 1초 후에 페이드인 시작
+	self.fadein_time = 1.0                  -- 1초 후에 페이드인 시작
 	self.alpha = 0
-	self.tint_color = vmath.vector4(1,1,1,1) -- 흰색으로 초기화
-	go.set(msg.url(nil, self.sprite_id, "airplane2_sprite"), "tint", vmath.vector4(1,1,1,0))
+	self.tint_color = vmath.vector4(1, 1, 1, 1) -- 흰색으로 초기화
+	go.set(msg.url(nil, self.sprite_id, "airplane2_sprite"), "tint", vmath.vector4(1, 1, 1, 0))
 end
 
 local function init_move(self)
@@ -20,12 +20,13 @@ function init(self)
 	self.sprite_id = factory.create("#factory", vmath.vector3(0, 0, 0))
 	go.set_parent(self.sprite_id, go.get_id(), false)
 	go.set_rotation(vmath.quat_rotation_z(self.current_angle), self.sprite_id)
+
 	msg.post(msg.url("#sprite"), "disable")
-	msg.post(msg.url(nil, self.sprite_id, "airplane_sprite"), "disable")
-	msg.post(msg.url(nil, self.sprite_id, "airplane3_sprite"), "disable")
-	msg.post(msg.url(nil, self.sprite_id, "airplane4_sprite"), "disable")
 
 	init_fadein(self)
+
+	go.set_scale(0.1, self.sprite_id) -- 초기 크기를 0.1로 설정
+	go.animate(self.sprite_id, "scale", go.PLAYBACK_ONCE_FORWARD, 0.7, go.EASING_LINEAR, 1)
 end
 
 function final(self)
@@ -48,7 +49,7 @@ local function move_update(self)
 		local new_pos = vmath.lerp(0.1, current_pos, self.target_pos)
 		go.set_position(new_pos)
 
-		local target_angle = math.atan2(self.target_dir.y, self.target_dir.x) - math.pi/2
+		local target_angle = math.atan2(self.target_dir.y, self.target_dir.x) - math.pi / 2
 		local function angle_lerp(a, b, t)
 			local diff = (b - a + math.pi) % (2 * math.pi) - math.pi
 			return a + diff * t
@@ -70,10 +71,12 @@ function on_message(self, message_id, message, sender)
 		if message.id then
 			self.npc_id = tostring(message.id)
 		end
+		if message.type then
+			msg.post(self.sprite_id, "airplane_type", { type = message.type })
+		end
 		if message.size then
 			self.size = message.size
-			local scale_factor = 0.75
-			go.set(msg.url(nil, self.sprite_id, "airplane2_sprite"), "scale", vmath.vector3(self.size/32 * scale_factor, self.size/32 * scale_factor, 1))
+			go.set(msg.url(nil, self.sprite_id, "airplane2_sprite"), "scale", vmath.vector3(self.size / 32, self.size / 32, 1))
 		end
 		if message.color then
 			local col = utils.hex_to_v4(tostring(message.color))

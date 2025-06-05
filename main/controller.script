@@ -14,11 +14,8 @@ function init(self)
 	go.set_parent(self.sprite_id, go.get_id(), false)  -- false = 상대좌표 유지
 	go.set_rotation(vmath.quat_rotation_z(self.current_angle), self.sprite_id)
 	
-	-- 큰 비행기 스프라이트 비활성화
-	msg.post(msg.url(nil, self.sprite_id, "airplane2_sprite"), "disable")
-	msg.post(msg.url(nil, self.sprite_id, "airplane3_sprite"), "disable")
-	msg.post(msg.url(nil, self.sprite_id, "airplane4_sprite"), "disable")
-	
+	msg.post(self.sprite_id, "airplane_type", { type = "player" })
+ 
 	msg.post(msg.url("#sprite"), "disable")
 
 	msg.post("camera", camera.MSG_BOUNDS, {
@@ -27,6 +24,11 @@ function init(self)
 		left = 0,
 		bottom = 0
 	})
+
+		-- 크기 애니메이션 설정
+ 	go.set_scale(0.1, self.sprite_id)  -- 초기 크기를 0으로 설정
+ 	go.animate(self.sprite_id, "scale", go.PLAYBACK_ONCE_FORWARD, 1, go.EASING_LINEAR, 1)
+ 
 end
 
 function update(self, dt)

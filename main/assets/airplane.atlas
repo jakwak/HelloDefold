@@ -1,0 +1,41 @@
+images {
+  image: "/main/assets/airplane5.png"
+}
+images {
+  image: "/main/assets/airplane6.png"
+}
+images {
+  image: "/main/assets/airplane7.png"
+}
+images {
+  image: "/main/assets/airplane8.png"
+}
+animations {
+  id: "default"
+  images {
+    image: "/main/assets/airplane1.png"
+  }
+  playback: PLAYBACK_NONE
+}
+animations {
+  id: "airplane2"
+  images {
+    image: "/main/assets/airplane2.png"
+  }
+  playback: PLAYBACK_NONE
+}
+animations {
+  id: "airplane3"
+  images {
+    image: "/main/assets/airplane3.png"
+  }
+  playback: PLAYBACK_NONE
+}
+animations {
+  id: "airplane4"
+  images {
+    image: "/main/assets/airplane4.png"
+  }
+  playback: PLAYBACK_NONE
+}
+extrude_borders: 2
