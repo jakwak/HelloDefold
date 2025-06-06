@@ -2,7 +2,7 @@ local utils = require "main.utils"
 
 local function init_fadein(self)
 	self.spawn_time = 0
-	self.fadein_time = 1.0                  -- 1초 후에 페이드인 시작
+	self.fadein_time = 1.0                     -- 1초 후에 페이드인 시작
 	self.alpha = 0
 	self.tint_color = vmath.vector4(1, 1, 1, 1) -- 흰색으로 초기화
 	go.set(msg.url(nil, self.sprite_id, "airplane2_sprite"), "tint", vmath.vector4(1, 1, 1, 0))
@@ -102,6 +102,9 @@ function on_message(self, message_id, message, sender)
 		if message.diry then
 			self.target_dir.y = message.diry * -1
 		end
+	end
+	if message_id == hash("delete_npc") then
+		go.delete()
 	end
 end
 

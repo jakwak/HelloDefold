@@ -106,28 +106,29 @@ local function on_remove_npc(self, npc, _)
 
 	-- 객체 존재 확인 후 안전한 삭제
 	if go.exists(obj) then
-		pcall(function()
-			go.delete(obj)
-		end)
+		-- pcall(function()
+		-- 	go.delete(obj)
+		-- end)
+		msg.post(obj, "delete_npc")
 	end
 end
 
 local function on_remove_bullet(self, bullet, bullet_id)
-	local obj = self.spawned_objects[bullet.id]
+	local obj = self.spawned_objects[bullet_id]
 	if not obj then
-		print("No object found for bullet: ", bullet.id)
+		-- print("No object found for bullet: ", bullet.id)
 		return
 	end
 
 	-- 객체 존재 확인
 	if not go.exists(obj) then
 		print("Object already deleted: ", bullet.id)
-		self.spawned_objects[bullet.id] = nil
+		self.spawned_objects[bullet_id] = nil
 		return
 	end
 
 	-- 즉시 spawned_objects에서 제거 (중복 호출 방지)
-	self.spawned_objects[bullet.id] = nil
+	self.spawned_objects[bullet_id] = nil
 
 	-- 안전한 삭제
 	pcall(function()
@@ -183,5 +184,16 @@ function on_message(self, message_id, message, sender)
 		callbacks:on_remove("npcBullets", function(bullet, bullet_id)
 			on_remove_bullet(self, bullet, bullet_id)
 		end)
+
+
+		room:on_message("npc_die_animation", function(message)
+			local obj = self.spawned_objects[message.npcId]
+			if not obj then
+				return
+			end
+			go.animate(obj, "scale", go.PLAYBACK_ONCE_FORWARD, 0.1, go.EASING_LINEAR, 1)
+		end)
+
+
 	end
 end
