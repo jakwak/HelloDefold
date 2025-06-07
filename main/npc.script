@@ -4,14 +4,18 @@ local function init_fadein(self)
 	self.spawn_time = 0
 	self.fadein_time = 1.0                     -- 1초 후에 페이드인 시작
 	self.alpha = 0
-	self.tint_color = vmath.vector4(1, 1, 1, 1) -- 흰색으로 초기화
-	go.set(msg.url(nil, self.sprite_id, "airplane2_sprite"), "tint", vmath.vector4(1, 1, 1, 0))
+	-- self.tint_color = vmath.vector4(1, 1, 1, 1) -- 흰색으로 초기화
+	-- go.set(msg.url(nil, self.sprite_id, "airplane2_sprite"), "tint", vmath.vector4(1, 1, 1, 0))
 end
 
 local function init_move(self)
 	self.target_pos = nil
 	self.current_angle = math.pi / 2
 	self.target_dir = vmath.vector3(0, 1, 0) -- 기본 방향 초기화
+	self.is_dying = false
+	self.die_speed = 100 -- 죽을 때 이동 속도
+	self.die_turn_angle = 0 -- 죽을 때 목표 각도
+	self.die_turn_speed = 1.8 -- 죽을 때 선회 속도
 end
 
 function init(self)
@@ -29,11 +33,6 @@ function init(self)
 	go.animate(self.sprite_id, "scale", go.PLAYBACK_ONCE_FORWARD, 0.7, go.EASING_LINEAR, 1)
 end
 
-function final(self)
-	-- Add finalization code here
-	-- Learn more: https://defold.com/manuals/script/
-	-- Remove this function if not needed
-end
 
 local function fadein_update(self, dt)
 	if self.spawn_time >= self.fadein_time and self.alpha < 1 then
@@ -43,8 +42,34 @@ local function fadein_update(self, dt)
 	end
 end
 
-local function move_update(self)
-	if self.target_pos then
+local function move_update(self, dt)
+	if self.is_dying then
+		-- 죽을 때 목표 각도로 천천히 선회
+		local function angle_lerp(a, b, t)
+			local diff = (b - a + math.pi) % (2 * math.pi) - math.pi
+			return a + diff * t
+		end
+		
+		self.current_angle = angle_lerp(self.current_angle, self.die_turn_angle, self.die_turn_speed * dt)
+		
+		-- 현재 각도에 따라 이동 방향 업데이트
+		self.target_dir.x = math.cos(self.current_angle + math.pi / 2)
+		self.target_dir.y = math.sin(self.current_angle + math.pi / 2)
+		
+		-- 새로운 방향으로 이동
+		local current_pos = go.get_position()
+		local move_distance = self.die_speed * dt
+		local new_pos = vmath.vector3(
+			current_pos.x + self.target_dir.x * move_distance,
+			current_pos.y + self.target_dir.y * move_distance,
+			current_pos.z
+		)
+		go.set_position(new_pos)
+		
+		go.set_rotation(vmath.quat_rotation_z(self.current_angle), self.sprite_id)
+		
+	elseif self.target_pos then
+		-- 일반 이동
 		local current_pos = go.get_position()
 		local new_pos = vmath.lerp(0.1, current_pos, self.target_pos)
 		go.set_position(new_pos)
@@ -63,7 +88,7 @@ function update(self, dt)
 	self.spawn_time = self.spawn_time + dt
 
 	fadein_update(self, dt)
-	move_update(self)
+	move_update(self, dt)
 end
 
 function on_message(self, message_id, message, sender)
@@ -103,25 +128,28 @@ function on_message(self, message_id, message, sender)
 			self.target_dir.y = message.diry * -1
 		end
 	end
-	if message_id == hash("delete_npc") then
-		go.delete()
+
+	if message_id == hash("die_npc") then
+		particlefx.play("#explode")
+		particlefx.play("#explode1")
+		particlefx.play("#explode2")
+		-- msg.post(msg.url("#sprite"), "enable")
+		go.animate(self.sprite_id, "scale", go.PLAYBACK_ONCE_FORWARD, 0.1, go.EASING_LINEAR, 2)
+		
+		-- 죽음 상태로 설정
+		self.is_dying = true
+		
+		-- 현재 각도에서 -60도 ~ +60도 범위의 임의 각도로 선회
+		local random_offset = (math.random() - 0.5) * 2 * math.pi / 3 -- -60도 ~ +60도
+		self.die_turn_angle = self.current_angle + random_offset
+		
+		-- 선회 속도를 랜덤하게 설정 (0.8 ~ 2.0)
+		self.die_turn_speed = 0.8 + math.random() * 1.2
+
+		-- 1초 후에 삭제
+		timer.delay(2, false, function()
+			go.delete()
+		end)
 	end
-end
 
-function on_input(self, action_id, action)
-	-- Add input-handling code here. The game object this script is attached to
-	-- must have acquired input focus:
-	--
-	--    msg.post(".", "acquire_input_focus")
-	--
-	-- All mapped input bindings will be received. Mouse and touch input will
-	-- be received regardless of where on the screen it happened.
-	-- Learn more: https://defold.com/manuals/input/
-	-- Remove this function if not needed
-end
-
-function on_reload(self)
-	-- Add reload-handling code here
-	-- Learn more: https://defold.com/manuals/hot-reload/
-	-- Remove this function if not needed
 end

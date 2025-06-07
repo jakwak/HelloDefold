@@ -6,6 +6,19 @@ instances {
 instances {
   id: "camera"
   prototype: "/orthographic/camera.go"
+  component_properties {
+    id: "script"
+    properties {
+      id: "bounds_right"
+      value: "2000.0"
+      type: PROPERTY_TYPE_NUMBER
+    }
+    properties {
+      id: "bounds_top"
+      value: "2000.0"
+      type: PROPERTY_TYPE_NUMBER
+    }
+  }
 }
 scale_along_z: 0
 embedded_instances {

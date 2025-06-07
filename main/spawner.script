@@ -1,5 +1,5 @@
 local Colyseus = require "colyseus.sdk"
-local utils    = require "main.utils"
+local camera = require "orthographic.camera"
 
 local room     = nil
 
@@ -13,6 +13,12 @@ local function on_add_player(self, player, session_id, callbacks)
 		-- 다음 프레임에서 따라가도록 지연 실행
 		timer.delay(0.1, false, function()
 			msg.post("camera", "follow", { target = obj })
+			msg.post("camera", camera.MSG_BOUNDS, {
+				right = 2000,
+				top = 2000,
+				left = 0,
+				bottom = 0
+			})
 		end)
 	else
 		local obj = factory.create(self.others_factory_url, vmath.vector3(player.x, player.y, 0))
@@ -109,7 +115,7 @@ local function on_remove_npc(self, npc, _)
 		-- pcall(function()
 		-- 	go.delete(obj)
 		-- end)
-		msg.post(obj, "delete_npc")
+		msg.post(obj, "die_npc")
 	end
 end
 
@@ -186,13 +192,14 @@ function on_message(self, message_id, message, sender)
 		end)
 
 
-		room:on_message("npc_die_animation", function(message)
-			local obj = self.spawned_objects[message.npcId]
-			if not obj then
-				return
-			end
-			go.animate(obj, "scale", go.PLAYBACK_ONCE_FORWARD, 0.1, go.EASING_LINEAR, 1)
-		end)
+		-- room:on_message("npc_die_animation", function(message)
+		-- 	local obj = self.spawned_objects[message.npcId]
+		-- 	if not obj then
+		-- 		return
+		-- 	end
+		-- 	msg.post(obj, "npc_die_animation")
+		-- 	go.animate(obj, "scale", go.PLAYBACK_ONCE_FORWARD, 0.1, go.EASING_LINEAR, 1)
+		-- end)
 
 
 	end

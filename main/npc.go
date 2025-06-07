@@ -2,6 +2,27 @@ components {
   id: "npc"
   component: "/main/npc.script"
 }
+components {
+  id: "explode"
+  component: "/main/assets/explode.particlefx"
+  position {
+    y: -20.0
+  }
+}
+components {
+  id: "explode1"
+  component: "/main/assets/explode.particlefx"
+  position {
+    x: 16.0
+  }
+}
+components {
+  id: "explode2"
+  component: "/main/assets/explode.particlefx"
+  position {
+    x: -16.0
+  }
+}
 embedded_components {
   id: "sprite"
   type: "sprite"
