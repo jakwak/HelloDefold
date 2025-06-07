@@ -82,6 +82,12 @@ local function on_add_bullet(self, bullet, _, callbacks)
 	callbacks:listen(bullet, "y", function(cur_val, prev_val)
 		msg.post(obj, "set_bullet_info", { y = cur_val })
 	end)
+	callbacks:listen(bullet, "dirx", function(cur_val, prev_val)
+		msg.post(obj, "set_bullet_info", { dirx = cur_val })
+	end)
+	callbacks:listen(bullet, "diry", function(cur_val, prev_val)
+		msg.post(obj, "set_bullet_info", { diry = cur_val })
+	end)
 end
 
 local function on_remove_player(self, _, session_id)

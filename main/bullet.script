@@ -18,7 +18,6 @@ end
 
 function on_message(self, message_id, message, sender)
 	if message_id == hash("set_bullet_info") then
-
 		if message.dirx then
 			self.dir.x = message.dirx
 		end
