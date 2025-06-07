@@ -6,7 +6,6 @@ function init(self)
 end
 
 function update(self, dt)
-
 	go.set_position(self.target_pos)
 
 	-- 목표 방향으로 회전

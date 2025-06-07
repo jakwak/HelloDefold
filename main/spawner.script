@@ -1,6 +1,6 @@
 local Colyseus = require "colyseus.sdk"
 local camera = require "orthographic.camera"
-
+local utils = require "main.utils"
 local room     = nil
 
 -- 콜백 함수들
@@ -62,7 +62,12 @@ local function on_add_npc(self, npc, _, callbacks)
 end
 
 local function on_add_bullet(self, bullet, _, callbacks)
-	local obj = factory.create(self.bullet_factory_url, vmath.vector3(bullet.x, bullet.y, 0))
+	local obj = nil
+	if bullet.type == "npc_missile" then
+		obj = factory.create(self.missile_factory_url, vmath.vector3(bullet.x, bullet.y, 0))
+	else
+		obj = factory.create(self.bullet_factory_url, vmath.vector3(bullet.x, bullet.y, 0))
+	end
 	self.spawned_objects[bullet.id] = obj
 	msg.post(obj, "set_bullet_info", {
 		id = bullet.id,
@@ -157,6 +162,7 @@ function init(self)
 	self.others_factory_url = msg.url(nil, go.get_id(), "others_factory")
 	self.npc_factory_url = msg.url(nil, go.get_id(), "npc_factory")
 	self.bullet_factory_url = msg.url(nil, go.get_id(), "bullet_factory")
+	self.missile_factory_url = msg.url(nil, go.get_id(), "missile_factory")
 end
 
 function on_message(self, message_id, message, sender)

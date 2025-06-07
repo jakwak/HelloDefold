@@ -70,6 +70,12 @@ embedded_instances {
   "  data: \"prototype: \\\"/main/bullet.go\\\"\\n"
   "\"\n"
   "}\n"
+  "embedded_components {\n"
+  "  id: \"missile_factory\"\n"
+  "  type: \"factory\"\n"
+  "  data: \"prototype: \\\"/main/missile.go\\\"\\n"
+  "\"\n"
+  "}\n"
   ""
 }
 embedded_instances {

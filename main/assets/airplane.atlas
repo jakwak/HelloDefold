@@ -10,6 +10,9 @@ images {
 images {
   image: "/main/assets/airplane8.png"
 }
+images {
+  image: "/main/assets/missile.png"
+}
 animations {
   id: "default"
   images {
