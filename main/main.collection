@@ -1,9 +1,5 @@
 name: "main"
 instances {
-  id: "walls"
-  prototype: "/main/walls.go"
-}
-instances {
   id: "camera"
   prototype: "/orthographic/camera.go"
   component_properties {
@@ -19,6 +15,10 @@ instances {
       type: PROPERTY_TYPE_NUMBER
     }
   }
+}
+instances {
+  id: "walls"
+  prototype: "/main/walls.go"
 }
 scale_along_z: 0
 embedded_instances {
@@ -80,6 +80,7 @@ embedded_instances {
 }
 embedded_instances {
   id: "bg_image"
+  children: "walls"
   data: "embedded_components {\n"
   "  id: \"sprite\"\n"
   "  type: \"sprite\"\n"
@@ -90,13 +91,21 @@ embedded_instances {
   "  texture: \\\"/main/assets/bg_image.atlas\\\"\\n"
   "}\\n"
   "\"\n"
+  "  scale {\n"
+  "    x: 3.337088\n"
+  "    y: 2.866719\n"
+  "  }\n"
   "}\n"
   ""
   position {
     z: -1.0
   }
-  scale3 {
-    x: 3.345965
-    y: 2.85438
-  }
+}
+embedded_instances {
+  id: "gui"
+  data: "components {\n"
+  "  id: \"gui\"\n"
+  "  component: \"/main/gui.gui\"\n"
+  "}\n"
+  ""
 }

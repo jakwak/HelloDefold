@@ -1,0 +1,27 @@
+script: "/main/gui.gui_script"
+fonts {
+  name: "korean"
+  font: "/assets/fonts/korean.font"
+}
+nodes {
+  position {
+    x: 504.0
+    y: 599.0
+  }
+  size {
+    x: 200.0
+    y: 100.0
+  }
+  color {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+  }
+  type: TYPE_TEXT
+  text: "NPC \352\260\257\354\210\230 : 0 \352\260\234"
+  font: "korean"
+  id: "npcs"
+  inherit_alpha: true
+}
+material: "/builtins/materials/gui.material"
+adjust_reference: ADJUST_REFERENCE_PARENT

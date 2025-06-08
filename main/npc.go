@@ -3,24 +3,24 @@ components {
   component: "/main/npc.script"
 }
 components {
-  id: "explode"
-  component: "/main/assets/explode.particlefx"
-  position {
-    y: -20.0
-  }
-}
-components {
   id: "explode1"
   component: "/main/assets/explode.particlefx"
   position {
-    x: 16.0
+    y: -9.0
   }
 }
 components {
   id: "explode2"
   component: "/main/assets/explode.particlefx"
   position {
-    x: -16.0
+    x: 7.0
+  }
+}
+components {
+  id: "explode3"
+  component: "/main/assets/explode.particlefx"
+  position {
+    x: -7.0
   }
 }
 embedded_components {

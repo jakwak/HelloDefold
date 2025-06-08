@@ -59,6 +59,8 @@ local function on_add_npc(self, npc, _, callbacks)
 	callbacks:listen(npc, "diry", function(cur_val, prev_val)
 		msg.post(obj, "set_npc_info", { diry = cur_val })
 	end)
+
+	msg.post("gui#gui", "npc_add")
 end
 
 local function on_add_bullet(self, bullet, _, callbacks)
@@ -127,6 +129,7 @@ local function on_remove_npc(self, npc, _)
 		-- 	go.delete(obj)
 		-- end)
 		msg.post(obj, "die_npc")
+		msg.post("gui#gui", "npc_remove")
 	end
 end
 

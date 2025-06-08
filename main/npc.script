@@ -130,7 +130,7 @@ function on_message(self, message_id, message, sender)
 	end
 
 	if message_id == hash("die_npc") then
-		particlefx.play("#explode")
+		particlefx.play("#explode3")
 		particlefx.play("#explode1")
 		particlefx.play("#explode2")
 		-- msg.post(msg.url("#sprite"), "enable")

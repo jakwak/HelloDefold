@@ -31,7 +31,7 @@ function on_message(self, message_id, message, sender)
 			msg.post(msg.url("#airplane" .. i .. "_sprite"), "disable")
 		end
 		if message.type == "player" or message.type == "others" then
-			msg.post(msg.url("#airplane1_sprite"), "enable")
+			msg.post(msg.url("#airplane4_sprite"), "enable")
 		end
 		if message.type == "leader" then
 			msg.post(msg.url("#airplane2_sprite"), "enable")
