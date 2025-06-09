@@ -17,8 +17,6 @@ local reconnect_timer = nil
 local reconnect_delay = 3.0
 local previous_state = nil
 
--- 이름 결정 함수 삭제 (utils에서 가져옴)
-
 -- 시작 위치 설정 (옵션)
 local join_options = {
   x = 480,  -- 원하는 시작 x 좌표 (주석 해제하면 사용)
@@ -36,7 +34,7 @@ function init(self)
   _G.players = {}
 
   -- 서버 접속 시도
-  connect_to_server()
+  -- connect_to_server()
 end
 
 function connect_to_server()
@@ -88,6 +86,11 @@ function on_message(self, message_id, message, sender)
   end
   if message_id == hash("__playground_message_types") then
     print("playground_message_types: ", message)
+  end
+  if message_id == hash("player_type") then
+    print("player_type: ", message.type)
+    join_options.type = message.type
+    connect_to_server()
   end
 end
 

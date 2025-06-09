@@ -30,11 +30,7 @@ nodes {
 nodes {
   position {
     x: 381.0
-    y: 291.0
-  }
-  scale {
-    x: 1.6
-    y: 1.6
+    y: 290.0
   }
   type: TYPE_BOX
   texture: "airplane/default"
@@ -45,11 +41,7 @@ nodes {
 nodes {
   position {
     x: 597.0
-    y: 289.0
-  }
-  scale {
-    x: 1.6
-    y: 1.6
+    y: 290.0
   }
   type: TYPE_BOX
   texture: "airplane/airplane4"

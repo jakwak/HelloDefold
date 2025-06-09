@@ -30,7 +30,10 @@ function on_message(self, message_id, message, sender)
 		for i = 1, 8 do
 			msg.post(msg.url("#airplane" .. i .. "_sprite"), "disable")
 		end
-		if message.type == "player" or message.type == "others" then
+		if message.type == "model1" then
+			msg.post(msg.url("#airplane1_sprite"), "enable")
+		end
+		if message.type == "model2" then
 			msg.post(msg.url("#airplane4_sprite"), "enable")
 		end
 		if message.type == "leader" then

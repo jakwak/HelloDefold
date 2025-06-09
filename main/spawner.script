@@ -8,7 +8,7 @@ local function on_add_player(self, player, session_id, callbacks)
 	if session_id == room.session_id then
 		local obj = factory.create(self.player_factory_url, vmath.vector3(player.x, player.y, 0))
 		self.spawned_objects[session_id] = obj
-		msg.post(obj, "set_player_info", { username = player.username, size = player.size, color = player.color })
+		msg.post(obj, "set_player_info", { username = player.username, size = player.size, color = player.color, type = player.type })
 
 		-- 다음 프레임에서 따라가도록 지연 실행
 		timer.delay(0.1, false, function()
@@ -23,7 +23,7 @@ local function on_add_player(self, player, session_id, callbacks)
 	else
 		local obj = factory.create(self.others_factory_url, vmath.vector3(player.x, player.y, 0))
 		self.spawned_objects[session_id] = obj
-		msg.post(obj, "set_player_info", { username = player.username, size = player.size, color = player.color })
+		msg.post(obj, "set_player_info", { username = player.username, size = player.size, color = player.color, type = player.type })
 
 		-- 다른 플레이어 위치/방향 업데이트 리스너
 		callbacks:listen(player, "x", function(cur_val, prev_val)

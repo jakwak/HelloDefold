@@ -4,6 +4,16 @@ local npc_count = 0
 function init(self)
 	-- 초기화 시 실행
 	gui.set_text(gui.get_node("npcs"), "NPCs: " .. npc_count)
+	
+	-- 모델 노드 참조 가져오기
+	self.model1_node = gui.get_node("model1")
+	self.model2_node = gui.get_node("model2")
+	
+	-- 마우스 오버 상태 추적
+	self.model1_hovered = false
+	self.model2_hovered = false
+
+	msg.post(".", "acquire_input_focus")
 end
 
 function final(self)
@@ -35,15 +45,45 @@ function on_message(self, message_id, message, sender)
 end
 
 function on_input(self, action_id, action)
-	-- Add input-handling code here. The game object this script is attached to
-	-- must have acquired input focus:
-	--
-	--    msg.post(".", "acquire_input_focus")
-	--
-	-- All mapped input bindings will be received. Mouse and touch input will
-	-- be received regardless of where on the screen it happened.
-	-- Learn more: https://defold.com/manuals/input/
-	-- Remove this function if not needed
+	-- 마우스 클릭 처리
+	if action_id == hash("touch") and action.pressed then
+		-- model1 클릭 확인
+		if gui.pick_node(self.model1_node, action.x, action.y) then
+			msg.post("managers#global_network", "player_type", { type = "model1" })
+   			gui.set_enabled(self.model1_node, false)
+   			gui.set_enabled(self.model2_node, false)
+		end
+		
+		-- model2 클릭 확인
+		if gui.pick_node(self.model2_node, action.x, action.y) then
+			msg.post("managers#global_network", "player_type", { type = "model2" })
+			gui.set_enabled(self.model1_node, false)
+   		gui.set_enabled(self.model2_node, false)
+		end
+	end
+	
+	-- 마우스 오버 처리 - action_id 체크 없이 모든 마우스 움직임 감지
+	if action and action.x and action.y then
+		-- model1 마우스 오버 확인
+		local model1_over = gui.pick_node(self.model1_node, action.x, action.y)
+		if model1_over and not self.model1_hovered then
+			self.model1_hovered = true
+			gui.animate(self.model1_node, "scale", vmath.vector3(1.2, 1.2, 1), gui.EASING_OUTQUAD, 0.2)
+		elseif not model1_over and self.model1_hovered then
+			self.model1_hovered = false
+			gui.animate(self.model1_node, "scale", vmath.vector3(1, 1, 1), gui.EASING_OUTQUAD, 0.2)
+		end
+		
+		-- model2 마우스 오버 확인
+		local model2_over = gui.pick_node(self.model2_node, action.x, action.y)
+		if model2_over and not self.model2_hovered then
+			self.model2_hovered = true
+			gui.animate(self.model2_node, "scale", vmath.vector3(1.2, 1.2, 1), gui.EASING_OUTQUAD, 0.2)
+		elseif not model2_over and self.model2_hovered then
+			self.model2_hovered = false
+			gui.animate(self.model2_node, "scale", vmath.vector3(1, 1, 1), gui.EASING_OUTQUAD, 0.2)
+		end
+	end
 end
 
 function on_reload(self)
