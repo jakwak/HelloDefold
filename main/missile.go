@@ -5,6 +5,9 @@ components {
 components {
   id: "explode"
   component: "/main/assets/explode.particlefx"
+  position {
+    x: -14.0
+  }
 }
 embedded_components {
   id: "sprite"
