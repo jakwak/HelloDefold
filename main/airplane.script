@@ -36,6 +36,12 @@ function on_message(self, message_id, message, sender)
 		if message.type == "model2" then
 			msg.post(msg.url("#airplane4_sprite"), "enable")
 		end
+		if message.type == "model3" then
+			msg.post(msg.url("#airplane3_sprite"), "enable")
+		end
+		if message.type == "model4" then
+			msg.post(msg.url("#airplane6_sprite"), "enable")
+		end
 		if message.type == "leader" then
 			msg.post(msg.url("#airplane2_sprite"), "enable")
 			go.set_scale(0.8, msg.url("#airplane2_sprite"))

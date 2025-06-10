@@ -1,17 +1,75 @@
-local room = nil
 local npc_count = 0
 
+-- 모델 설정
+local models = {"model1", "model2", "model3", "model4"}
+
+-- npcs 텍스트를 화면 한 가운데 꼭대기에 정렬하는 함수
+local function arrange_npcs_text_top_center(self)
+	local screen_width = gui.get_width()
+	local screen_height = gui.get_height()
+
+	if self.npcs_node then
+		-- 화면 가운데 상단에 배치 (상단에서 약간 아래로)
+		gui.set_position(self.npcs_node, vmath.vector3(screen_width/2, screen_height - 20, 0))
+		-- 텍스트 중앙 정렬
+		gui.set_pivot(self.npcs_node, gui.PIVOT_CENTER)
+	end
+end
+
+-- 모델 노드들을 가로로 한 줄 정렬하는 함수
+local function arrange_models_horizontal(self)
+	local screen_width = gui.get_width()
+	local screen_height = gui.get_height()
+	
+	local spacing = 200  -- 모델 간 간격
+	local total_width = (#models - 1) * spacing  -- 전체 너비 계산
+	local start_x = (screen_width - total_width) / 2  -- 시작 x 위치 (중앙 정렬)
+	
+	for i, model in ipairs(models) do
+		if self.nodes[model] then
+			gui.set_position(self.nodes[model], vmath.vector3(start_x + (i-1) * spacing, screen_height/2, 0))
+		end
+	end
+end
+
+local function arrange_models_responsive(self)
+	local screen_width = gui.get_width()
+	local screen_height = gui.get_height()
+	
+	-- 화면 크기에 따라 간격 조정
+	local spacing_x = math.min(300, screen_width * 0.2)
+	local spacing_y = math.min(200, screen_height * 0.2)
+	
+	local positions = {
+		{x = screen_width/2 - spacing_x/2, y = screen_height/2 + spacing_y/2},
+		{x = screen_width/2 + spacing_x/2, y = screen_height/2 + spacing_y/2},
+		{x = screen_width/2 - spacing_x/2, y = screen_height/2 - spacing_y/2},
+		{x = screen_width/2 + spacing_x/2, y = screen_height/2 - spacing_y/2}
+	}
+	
+	for i, model in ipairs(models) do
+		if self.nodes[model] then
+			gui.set_position(self.nodes[model], vmath.vector3(positions[i].x, positions[i].y, 0))
+		end
+	end
+end
+
+
 function init(self)
-	-- 초기화 시 실행
-	gui.set_text(gui.get_node("npcs"), "NPCs: " .. npc_count)
+	self.npcs_node = gui.get_node("npcs")
+	gui.set_text(self.npcs_node, "NPCs: " .. npc_count)
 	
-	-- 모델 노드 참조 가져오기
-	self.model1_node = gui.get_node("model1")
-	self.model2_node = gui.get_node("model2")
+	-- 모델 노드와 상태 초기화
+	self.nodes = {}
+	self.hovered = {}
 	
-	-- 마우스 오버 상태 추적
-	self.model1_hovered = false
-	self.model2_hovered = false
+	for _, model in ipairs(models) do
+		self.nodes[model] = gui.get_node(model)
+		self.hovered[model] = false
+	end
+
+	arrange_npcs_text_top_center(self)
+	arrange_models_horizontal(self)
 
 	msg.post(".", "acquire_input_focus")
 end
@@ -34,54 +92,44 @@ function update(self, dt)
 end
 
 function on_message(self, message_id, message, sender)
-		if message_id == hash("npc_add") then
-			npc_count = npc_count + 1
-			gui.set_text(gui.get_node("npcs"), "NPCs: " .. npc_count)
-		end
-		if message_id == hash("npc_remove") then
-			npc_count = npc_count - 1
-			gui.set_text(gui.get_node("npcs"), "NPCs: " .. npc_count)
-		end
+	if message_id == hash("npc_add") then
+		npc_count = npc_count + 1
+	elseif message_id == hash("npc_remove") then
+		npc_count = npc_count - 1
+	end
+	gui.set_text(gui.get_node("npcs"), "NPCs: " .. npc_count)
 end
 
 function on_input(self, action_id, action)
-	-- 마우스 클릭 처리
+	if not action or not action.x or not action.y then return end
+	
+	-- 클릭 처리
 	if action_id == hash("touch") and action.pressed then
-		-- model1 클릭 확인
-		if gui.pick_node(self.model1_node, action.x, action.y) then
-			msg.post("managers#global_network", "player_type", { type = "model1" })
-   			gui.set_enabled(self.model1_node, false)
-   			gui.set_enabled(self.model2_node, false)
-		end
-		
-		-- model2 클릭 확인
-		if gui.pick_node(self.model2_node, action.x, action.y) then
-			msg.post("managers#global_network", "player_type", { type = "model2" })
-			gui.set_enabled(self.model1_node, false)
-   		gui.set_enabled(self.model2_node, false)
+		for _, model in ipairs(models) do
+			if gui.pick_node(self.nodes[model], action.x, action.y) then
+				msg.post("managers#global_network", "player_type", { type = model })
+				
+				-- 모든 모델 숨기기
+				for _, m in ipairs(models) do
+					gui.animate(self.nodes[m], "color.w", 0, gui.EASING_LINEAR, 0.5, 0, function()
+						gui.set_enabled(self.nodes[m], false)
+					end)
+				end
+				break
+			end
 		end
 	end
 	
-	-- 마우스 오버 처리 - action_id 체크 없이 모든 마우스 움직임 감지
-	if action and action.x and action.y then
-		-- model1 마우스 오버 확인
-		local model1_over = gui.pick_node(self.model1_node, action.x, action.y)
-		if model1_over and not self.model1_hovered then
-			self.model1_hovered = true
-			gui.animate(self.model1_node, "scale", vmath.vector3(1.2, 1.2, 1), gui.EASING_OUTQUAD, 0.2)
-		elseif not model1_over and self.model1_hovered then
-			self.model1_hovered = false
-			gui.animate(self.model1_node, "scale", vmath.vector3(1, 1, 1), gui.EASING_OUTQUAD, 0.2)
-		end
+	-- 마우스 오버 처리
+	for _, model in ipairs(models) do
+		local is_over = gui.pick_node(self.nodes[model], action.x, action.y)
 		
-		-- model2 마우스 오버 확인
-		local model2_over = gui.pick_node(self.model2_node, action.x, action.y)
-		if model2_over and not self.model2_hovered then
-			self.model2_hovered = true
-			gui.animate(self.model2_node, "scale", vmath.vector3(1.2, 1.2, 1), gui.EASING_OUTQUAD, 0.2)
-		elseif not model2_over and self.model2_hovered then
-			self.model2_hovered = false
-			gui.animate(self.model2_node, "scale", vmath.vector3(1, 1, 1), gui.EASING_OUTQUAD, 0.2)
+		if is_over and not self.hovered[model] then
+			self.hovered[model] = true
+			gui.animate(self.nodes[model], "scale", vmath.vector3(1.2, 1.2, 1), gui.EASING_OUTQUAD, 0.2)
+		elseif not is_over and self.hovered[model] then
+			self.hovered[model] = false
+			gui.animate(self.nodes[model], "scale", vmath.vector3(1, 1, 1), gui.EASING_OUTQUAD, 0.2)
 		end
 	end
 end

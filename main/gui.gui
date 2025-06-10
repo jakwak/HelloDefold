@@ -29,7 +29,7 @@ nodes {
 }
 nodes {
   position {
-    x: 381.0
+    x: 197.0
     y: 290.0
   }
   type: TYPE_BOX
@@ -40,12 +40,34 @@ nodes {
 }
 nodes {
   position {
-    x: 597.0
+    x: 609.0
     y: 290.0
   }
   type: TYPE_BOX
   texture: "airplane/airplane4"
   id: "model2"
+  inherit_alpha: true
+  size_mode: SIZE_MODE_AUTO
+}
+nodes {
+  position {
+    x: 420.0
+    y: 290.0
+  }
+  type: TYPE_BOX
+  texture: "airplane/airplane3"
+  id: "model3"
+  inherit_alpha: true
+  size_mode: SIZE_MODE_AUTO
+}
+nodes {
+  position {
+    x: 795.0
+    y: 290.0
+  }
+  type: TYPE_BOX
+  texture: "airplane/airplane6"
+  id: "model4"
   inherit_alpha: true
   size_mode: SIZE_MODE_AUTO
 }

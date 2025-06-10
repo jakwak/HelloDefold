@@ -3,6 +3,19 @@ local camera = require "orthographic.camera"
 local utils = require "main.utils"
 local room     = nil
 
+-- 안전한 정리 함수
+local function safe_cleanup_object(self, id, obj)
+	if obj and go.exists(obj) then
+		pcall(function()
+			go.delete(obj)
+		end)
+	end
+	self.spawned_objects[id] = nil
+	if self.removing_objects then
+		self.removing_objects[id] = nil
+	end
+end
+
 -- 콜백 함수들
 local function on_add_player(self, player, session_id, callbacks)
 	if session_id == room.session_id then
@@ -99,65 +112,57 @@ end
 
 local function on_remove_player(self, _, session_id)
 	local obj = self.spawned_objects[session_id]
-	if not obj then
+	if not obj or self.removing_objects[session_id] then
 		return
 	end
 
-	-- 즉시 spawned_objects에서 제거 (중복 호출 방지)
-	self.spawned_objects[session_id] = nil
-
-	-- 객체 존재 확인 후 안전한 삭제
-	if go.exists(obj) then
-		pcall(function()
-			go.delete(obj)
-		end)
-	end
+	-- 삭제 중 상태로 마킹
+	self.removing_objects[session_id] = true
+	
+	-- 안전한 정리 함수 사용
+	safe_cleanup_object(self, session_id, obj)
 end
 
 local function on_remove_npc(self, npc, _)
 	local obj = self.spawned_objects[npc.id]
-	if not obj then
+	if not obj or self.removing_objects[npc.id] then
 		return
 	end
 
-	-- 즉시 spawned_objects에서 제거 (중복 호출 방지)
-	self.spawned_objects[npc.id] = nil
+	-- 삭제 중 상태로 마킹
+	self.removing_objects[npc.id] = true
 
-	-- 객체 존재 확인 후 안전한 삭제
 	if go.exists(obj) then
-		-- pcall(function()
-		-- 	go.delete(obj)
-		-- end)
 		msg.post(obj, "die_npc")
 		msg.post("gui#gui", "npc_remove")
+		
+		-- 일정 시간 후 강제 정리 (애니메이션이 완료되지 않을 경우 대비)
+		timer.delay(2.0, false, function()
+			if self.spawned_objects[npc.id] then
+				safe_cleanup_object(self, npc.id, self.spawned_objects[npc.id])
+			end
+		end)
+	else
+		safe_cleanup_object(self, npc.id, obj)
 	end
 end
 
 local function on_remove_bullet(self, bullet, bullet_id)
 	local obj = self.spawned_objects[bullet_id]
-	if not obj then
-		-- print("No object found for bullet: ", bullet.id)
+	if not obj or self.removing_objects[bullet_id] then
 		return
 	end
 
-	-- 객체 존재 확인
-	if not go.exists(obj) then
-		print("Object already deleted: ", bullet.id)
-		self.spawned_objects[bullet_id] = nil
-		return
-	end
-
-	-- 즉시 spawned_objects에서 제거 (중복 호출 방지)
-	self.spawned_objects[bullet_id] = nil
-
-	-- 안전한 삭제
-	pcall(function()
-		go.delete(obj)
-	end)
+	-- 삭제 중 상태로 마킹
+	self.removing_objects[bullet_id] = true
+	
+	-- 안전한 정리 함수 사용
+	safe_cleanup_object(self, bullet_id, obj)
 end
 
 function init(self)
 	self.spawned_objects = {}
+	self.removing_objects = {}  -- 삭제 중인 객체 추적
 	local my_id = msg.url()
 	msg.post("main:/managers#global_network", "register_listener", { id = my_id })
 
@@ -206,16 +211,11 @@ function on_message(self, message_id, message, sender)
 			on_remove_bullet(self, bullet, bullet_id)
 		end)
 
-
-		-- room:on_message("npc_die_animation", function(message)
-		-- 	local obj = self.spawned_objects[message.npcId]
-		-- 	if not obj then
-		-- 		return
-		-- 	end
-		-- 	msg.post(obj, "npc_die_animation")
-		-- 	go.animate(obj, "scale", go.PLAYBACK_ONCE_FORWARD, 0.1, go.EASING_LINEAR, 1)
-		-- end)
-
-
+	-- NPC 삭제 완료 알림 처리 (NPC 스크립트에서 애니메이션 완료 후 보내는 메시지)
+	elseif message_id == hash("npc_deleted") then
+		local npc_id = message.id
+		if self.spawned_objects[npc_id] then
+			safe_cleanup_object(self, npc_id, self.spawned_objects[npc_id])
+		end
 	end
 end
