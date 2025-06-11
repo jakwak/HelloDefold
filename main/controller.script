@@ -66,6 +66,12 @@ function update(self, dt)
 					callbacks:listen(player, "diry", function(cur_val, prev_val)
 						self.target_dir.y = cur_val
 					end)
+					callbacks:listen(player, "hp", function(cur_val, prev_val)
+						self.hp = cur_val
+						if self.hp > 0 and self.hp < 100 then
+							msg.post(self.sprite_id, "explode")
+						end
+					end)
 				end
 			end)
 		end

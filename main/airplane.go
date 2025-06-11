@@ -118,3 +118,9 @@ embedded_components {
     y: 0.5
   }
 }
+embedded_components {
+  id: "explosion_factory"
+  type: "factory"
+  data: "prototype: \"/main/assets/explosion.go\"\n"
+  ""
+}

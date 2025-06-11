@@ -51,6 +51,11 @@ function on_message(self, message_id, message, sender)
 			go.set_scale(0.8, msg.url("#airplane3_sprite"))
 		end
 	end
+	if message_id == hash("explode") then
+		local explode = factory.create("#explosion_factory", vmath.vector3(math.random(-15, 15), math.random(-15, 15), 0))
+		go.set_parent(explode, go.get_id(), false)
+		msg.post(explode, "play")		
+	end
 end
 
 function on_input(self, action_id, action)
