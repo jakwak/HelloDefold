@@ -51,6 +51,9 @@ local function on_add_player(self, player, session_id, callbacks)
 		callbacks:listen(player, "diry", function(cur_val, prev_val)
 			msg.post(obj, "set_player_info", { diry = cur_val })
 		end)
+		callbacks:listen(player, "hp", function(cur_val, prev_val)
+			msg.post(obj, "set_player_info", { hp = cur_val })
+		end)
 	end
 end
 
@@ -71,6 +74,9 @@ local function on_add_npc(self, npc, _, callbacks)
 	end)
 	callbacks:listen(npc, "diry", function(cur_val, prev_val)
 		msg.post(obj, "set_npc_info", { diry = cur_val })
+	end)
+	callbacks:listen(npc, "hp", function(cur_val, prev_val)
+		msg.post(obj, "set_npc_info", { hp = cur_val })
 	end)
 
 	msg.post("gui#gui", "npc_add")

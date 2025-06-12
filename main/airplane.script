@@ -56,6 +56,11 @@ function on_message(self, message_id, message, sender)
 		go.set_parent(explode, go.get_id(), false)
 		msg.post(explode, "play")		
 	end
+	if message_id == hash("explode_npc") then
+		local explode = factory.create("#explosion_factory", vmath.vector3(0, 0, 0))
+		go.set_parent(explode, go.get_id(), false)
+		msg.post(explode, "explode_npc")
+	end
 end
 
 function on_input(self, action_id, action)

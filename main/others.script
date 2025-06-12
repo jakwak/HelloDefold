@@ -4,6 +4,8 @@ function init(self)
   -- 필요한 초기화
   self.x = 0
   self.y = 0
+  self.target_x = 0
+  self.target_y = 0
   self.username = ""
   self.size = 0
   self.color = ""
@@ -42,6 +44,12 @@ function update(self, dt)
     self.current_angle = angle_lerp(self.current_angle, target_angle, 0.15)
     go.set_rotation(vmath.quat_rotation_z(self.current_angle), self.sprite_id)
   end
+
+  -- 부드러운 위치 이동 처리
+  local lerp_factor = 0.1 -- 보간 계수 (0~1 사이 값, 클수록 빠르게 이동)
+  self.x = self.x + (self.target_x - self.x) * lerp_factor
+  self.y = self.y + (self.target_y - self.y) * lerp_factor
+  go.set_position(vmath.vector3(self.x, self.y, 0))
 end
 
 function on_message(self, message_id, message, sender)
@@ -59,12 +67,10 @@ function on_message(self, message_id, message, sender)
       go.set("#sprite", "tint", utils.hex_to_v4(tostring(self.color)))
     end
     if message.x then
-      self.x = message.x
-      go.set_position(vmath.vector3(self.x, self.y, 0))
+      self.target_x = message.x
     end
     if message.y then
-      self.y = message.y
-      go.set_position(vmath.vector3(self.x, self.y, 0))
+      self.target_y = message.y
     end
     if message.dirx or message.diry then
       -- 방향 벡터 업데이트
@@ -73,6 +79,12 @@ function on_message(self, message_id, message, sender)
     end
     if message.type then
       msg.post(self.sprite_id, "airplane_type", { type = message.type })
+    end
+    if message.hp then
+      self.hp = message.hp
+      if self.hp > 0 and self.hp < 100 then
+        msg.post(self.sprite_id, "explode")
+      end
     end
   end
 end

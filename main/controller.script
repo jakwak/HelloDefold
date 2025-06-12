@@ -118,7 +118,7 @@ function on_input(self, action_id, action)
 		if room then
 			room:send("move", { x = dir.x, y = dir.y })
 			local cur_pos = go.get_position()
-			room:send("shoot_bullet", { x = cur_pos.x, y = cur_pos.y, dirx = dir.x, diry = dir.y, power = 10, velocity = 10, owner_id = room.session_id, type = "player_bullet" })
+			room:send("shoot_bullet", { x = cur_pos.x, y = cur_pos.y, dirx = dir.x, diry = dir.y, power = 20, velocity = 10, owner_id = room.session_id, type = "player_bullet" })
 
 			room:send("spawn_npc")
 		end

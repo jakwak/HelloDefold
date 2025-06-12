@@ -3,6 +3,10 @@ components {
   component: "/main/assets/explode.particlefx"
 }
 components {
-  id: "explode1"
+  id: "script"
   component: "/main/assets/explode.script"
+}
+components {
+  id: "explode2"
+  component: "/main/assets/explode2.particlefx"
 }

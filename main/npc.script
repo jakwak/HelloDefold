@@ -127,12 +127,20 @@ function on_message(self, message_id, message, sender)
 		if message.diry then
 			self.target_dir.y = message.diry * -1
 		end
+		if message.hp then
+			self.hp = message.hp
+			if self.hp > 0 and self.hp < 100 then
+				msg.post(self.sprite_id, "explode")
+			end
+		end
 	end
 
 	if message_id == hash("die_npc") then
 		particlefx.play("#explode3")
 		particlefx.play("#explode1")
 		particlefx.play("#explode2")
+		msg.post(self.sprite_id, "explode_npc")
+		
 		-- msg.post(msg.url("#sprite"), "enable")
 		go.animate(self.sprite_id, "scale", go.PLAYBACK_ONCE_FORWARD, 0.1, go.EASING_LINEAR, 2)
 		
