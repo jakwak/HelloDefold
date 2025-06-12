@@ -6,6 +6,7 @@ emitters {
   animation: "anim"
   material: "/builtins/materials/particlefx.material"
   blend_mode: BLEND_MODE_ADD
+  particle_orientation: PARTICLE_ORIENTATION_ANGULAR_VELOCITY
   max_particle_count: 128
   type: EMITTER_TYPE_SPHERE
   properties {
@@ -140,6 +141,21 @@ emitters {
     key: PARTICLE_KEY_ANGULAR_VELOCITY
     points {
       y: 1.0
+    }
+  }
+  modifiers {
+    type: MODIFIER_TYPE_RADIAL
+    properties {
+      key: MODIFIER_KEY_MAGNITUDE
+      points {
+        y: 100.0
+      }
+    }
+    properties {
+      key: MODIFIER_KEY_MAX_DISTANCE
+      points {
+        y: 1000.0
+      }
     }
   }
 }
