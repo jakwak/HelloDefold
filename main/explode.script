@@ -3,7 +3,6 @@ function on_message(self, message_id, message, sender)
 		particlefx.play("#explode")
 	end
 	if message_id == hash("explode_npc") then
-		print("explode_npc~~~~~~")
 		particlefx.play("#explode2")
 	end
 end

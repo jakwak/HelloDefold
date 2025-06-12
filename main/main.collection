@@ -108,3 +108,13 @@ embedded_instances {
   "}\n"
   ""
 }
+embedded_instances {
+  id: "floating_text"
+  data: "embedded_components {\n"
+  "  id: \"factory\"\n"
+  "  type: \"factory\"\n"
+  "  data: \"prototype: \\\"/main/floating_text.go\\\"\\n"
+  "\"\n"
+  "}\n"
+  ""
+}

@@ -4,7 +4,7 @@ components {
 }
 components {
   id: "script"
-  component: "/main/assets/explode.script"
+  component: "/main/explode.script"
 }
 components {
   id: "explode2"

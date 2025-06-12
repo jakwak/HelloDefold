@@ -121,6 +121,6 @@ embedded_components {
 embedded_components {
   id: "explosion_factory"
   type: "factory"
-  data: "prototype: \"/main/assets/explosion.go\"\n"
+  data: "prototype: \"/main/explosion.go\"\n"
   ""
 }

@@ -1,8 +1,9 @@
 local utils = require "main.utils"
+local camera = require "orthographic.camera"
 
 local function init_fadein(self)
 	self.spawn_time = 0
-	self.fadein_time = 1.0                     -- 1초 후에 페이드인 시작
+	self.fadein_time = 1.0 -- 1초 후에 페이드인 시작
 	self.alpha = 0
 	-- self.tint_color = vmath.vector4(1, 1, 1, 1) -- 흰색으로 초기화
 	-- go.set(msg.url(nil, self.sprite_id, "airplane2_sprite"), "tint", vmath.vector4(1, 1, 1, 0))
@@ -13,9 +14,9 @@ local function init_move(self)
 	self.current_angle = math.pi / 2
 	self.target_dir = vmath.vector3(0, 1, 0) -- 기본 방향 초기화
 	self.is_dying = false
-	self.die_speed = 100 -- 죽을 때 이동 속도
-	self.die_turn_angle = 0 -- 죽을 때 목표 각도
-	self.die_turn_speed = 1.8 -- 죽을 때 선회 속도
+	self.die_speed = 100                    -- 죽을 때 이동 속도
+	self.die_turn_angle = 0                 -- 죽을 때 목표 각도
+	self.die_turn_speed = 1.8               -- 죽을 때 선회 속도
 end
 
 function init(self)
@@ -33,7 +34,6 @@ function init(self)
 	go.animate(self.sprite_id, "scale", go.PLAYBACK_ONCE_FORWARD, 0.7, go.EASING_LINEAR, 1)
 end
 
-
 local function fadein_update(self, dt)
 	if self.spawn_time >= self.fadein_time and self.alpha < 1 then
 		self.alpha = math.min(1, self.alpha + dt)
@@ -49,13 +49,13 @@ local function move_update(self, dt)
 			local diff = (b - a + math.pi) % (2 * math.pi) - math.pi
 			return a + diff * t
 		end
-		
+
 		self.current_angle = angle_lerp(self.current_angle, self.die_turn_angle, self.die_turn_speed * dt)
-		
+
 		-- 현재 각도에 따라 이동 방향 업데이트
 		self.target_dir.x = math.cos(self.current_angle + math.pi / 2)
 		self.target_dir.y = math.sin(self.current_angle + math.pi / 2)
-		
+
 		-- 새로운 방향으로 이동
 		local current_pos = go.get_position()
 		local move_distance = self.die_speed * dt
@@ -65,9 +65,8 @@ local function move_update(self, dt)
 			current_pos.z
 		)
 		go.set_position(new_pos)
-		
+
 		go.set_rotation(vmath.quat_rotation_z(self.current_angle), self.sprite_id)
-		
 	elseif self.target_pos then
 		-- 일반 이동
 		local current_pos = go.get_position()
@@ -98,6 +97,7 @@ function on_message(self, message_id, message, sender)
 		end
 		if message.type then
 			msg.post(self.sprite_id, "airplane_type", { type = message.type })
+			self.type = message.type
 		end
 		if message.size then
 			self.size = message.size
@@ -129,8 +129,13 @@ function on_message(self, message_id, message, sender)
 		end
 		if message.hp then
 			self.hp = message.hp
-			if self.hp > 0 and self.hp < 100 then
+			if self.type == "leader" and self.hp > 0 and self.hp < 100 then
 				msg.post(self.sprite_id, "explode")
+				spawn_floating_text(go.get_position().x, go.get_position().y, 10)
+			end
+			if self.type == "follower" and self.hp > 0 and self.hp < 50 then
+				msg.post(self.sprite_id, "explode")
+				spawn_floating_text(go.get_position().x, go.get_position().y, 10)
 			end
 		end
 	end
@@ -140,17 +145,19 @@ function on_message(self, message_id, message, sender)
 		particlefx.play("#explode1")
 		particlefx.play("#explode2")
 		msg.post(self.sprite_id, "explode_npc")
-		
+
+		spawn_floating_text(go.get_position().x, go.get_position().y, 50)
+
 		-- msg.post(msg.url("#sprite"), "enable")
 		go.animate(self.sprite_id, "scale", go.PLAYBACK_ONCE_FORWARD, 0.1, go.EASING_LINEAR, 2)
-		
+
 		-- 죽음 상태로 설정
 		self.is_dying = true
-		
+
 		-- 현재 각도에서 -60도 ~ +60도 범위의 임의 각도로 선회
 		local random_offset = (math.random() - 0.5) * 2 * math.pi / 3 -- -60도 ~ +60도
 		self.die_turn_angle = self.current_angle + random_offset
-		
+
 		-- 선회 속도를 랜덤하게 설정 (0.8 ~ 2.0)
 		self.die_turn_speed = 0.8 + math.random() * 1.2
 
@@ -159,5 +166,22 @@ function on_message(self, message_id, message, sender)
 			go.delete()
 		end)
 	end
+end
 
+function spawn_floating_text(world_x, world_y, point_plus)
+	-- 화면 좌표를 GUI 좌표로 변환
+	local screen_pos = camera.world_to_screen(nil, vmath.vector3(world_x, world_y, 0))
+	local gui_pos = vmath.vector3(screen_pos.x, screen_pos.y, 0)
+
+	local factory_url = msg.url("floating_text#factory")
+	local obj = factory.create(factory_url)
+
+	-- GUI에 좌표 전달
+	msg.post(obj, "set_start_pos", { pos = gui_pos })
+	msg.post(obj, "set_text", { text = "+" .. point_plus })
+
+	-- 1.5초 후에 obj 삭제
+	timer.delay(1.5, false, function()
+		go.delete(obj)
+	end)
 end
