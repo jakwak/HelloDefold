@@ -1,7 +1,7 @@
 local npc_count = 0
 
 -- 모델 설정
-local models = {"model1", "model2", "model3", "model4"}
+local models = { "model1", "model2", "model3", "model4" }
 
 -- npcs 텍스트를 화면 한 가운데 꼭대기에 정렬하는 함수
 local function arrange_npcs_text_top_center(self)
@@ -10,7 +10,7 @@ local function arrange_npcs_text_top_center(self)
 
 	if self.npcs_node then
 		-- 화면 가운데 상단에 배치 (상단에서 약간 아래로)
-		gui.set_position(self.npcs_node, vmath.vector3(screen_width/2, screen_height - 20, 0))
+		gui.set_position(self.npcs_node, vmath.vector3(screen_width / 2, screen_height - 20, 0))
 		-- 텍스트 중앙 정렬
 		gui.set_pivot(self.npcs_node, gui.PIVOT_CENTER)
 	end
@@ -20,14 +20,14 @@ end
 local function arrange_models_horizontal(self)
 	local screen_width = gui.get_width()
 	local screen_height = gui.get_height()
-	
-	local spacing = 200  -- 모델 간 간격
-	local total_width = (#models - 1) * spacing  -- 전체 너비 계산
-	local start_x = (screen_width - total_width) / 2  -- 시작 x 위치 (중앙 정렬)
-	
+
+	local spacing = 200                             -- 모델 간 간격
+	local total_width = (#models - 1) * spacing     -- 전체 너비 계산
+	local start_x = (screen_width - total_width) / 2 -- 시작 x 위치 (중앙 정렬)
+
 	for i, model in ipairs(models) do
 		if self.nodes[model] then
-			gui.set_position(self.nodes[model], vmath.vector3(start_x + (i-1) * spacing, screen_height/2, 0))
+			gui.set_position(self.nodes[model], vmath.vector3(start_x + (i - 1) * spacing, screen_height / 2, 0))
 		end
 	end
 end
@@ -35,18 +35,18 @@ end
 local function arrange_models_responsive(self)
 	local screen_width = gui.get_width()
 	local screen_height = gui.get_height()
-	
+
 	-- 화면 크기에 따라 간격 조정
 	local spacing_x = math.min(300, screen_width * 0.2)
 	local spacing_y = math.min(200, screen_height * 0.2)
-	
+
 	local positions = {
-		{x = screen_width/2 - spacing_x/2, y = screen_height/2 + spacing_y/2},
-		{x = screen_width/2 + spacing_x/2, y = screen_height/2 + spacing_y/2},
-		{x = screen_width/2 - spacing_x/2, y = screen_height/2 - spacing_y/2},
-		{x = screen_width/2 + spacing_x/2, y = screen_height/2 - spacing_y/2}
+		{ x = screen_width / 2 - spacing_x / 2, y = screen_height / 2 + spacing_y / 2 },
+		{ x = screen_width / 2 + spacing_x / 2, y = screen_height / 2 + spacing_y / 2 },
+		{ x = screen_width / 2 - spacing_x / 2, y = screen_height / 2 - spacing_y / 2 },
+		{ x = screen_width / 2 + spacing_x / 2, y = screen_height / 2 - spacing_y / 2 }
 	}
-	
+
 	for i, model in ipairs(models) do
 		if self.nodes[model] then
 			gui.set_position(self.nodes[model], vmath.vector3(positions[i].x, positions[i].y, 0))
@@ -58,11 +58,11 @@ end
 function init(self)
 	self.npcs_node = gui.get_node("npcs")
 	gui.set_text(self.npcs_node, "NPCs: " .. npc_count)
-	
+
 	-- 모델 노드와 상태 초기화
 	self.nodes = {}
 	self.hovered = {}
-	
+
 	for _, model in ipairs(models) do
 		self.nodes[model] = gui.get_node(model)
 		self.hovered[model] = false
@@ -102,13 +102,13 @@ end
 
 function on_input(self, action_id, action)
 	if not action or not action.x or not action.y then return end
-	
+
 	-- 클릭 처리
 	if action_id == hash("touch") and action.pressed then
 		for _, model in ipairs(models) do
 			if gui.pick_node(self.nodes[model], action.x, action.y) then
 				msg.post("managers#global_network", "player_type", { type = model })
-				
+
 				-- 모든 모델 숨기기
 				for _, m in ipairs(models) do
 					gui.animate(self.nodes[m], "color.w", 0, gui.EASING_LINEAR, 0.5, 0, function()
@@ -119,11 +119,11 @@ function on_input(self, action_id, action)
 			end
 		end
 	end
-	
+
 	-- 마우스 오버 처리
 	for _, model in ipairs(models) do
 		local is_over = gui.pick_node(self.nodes[model], action.x, action.y)
-		
+
 		if is_over and not self.hovered[model] then
 			self.hovered[model] = true
 			gui.animate(self.nodes[model], "scale", vmath.vector3(1.2, 1.2, 1), gui.EASING_OUTQUAD, 0.2)

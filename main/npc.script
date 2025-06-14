@@ -1,5 +1,4 @@
 local utils = require "main.utils"
-local camera = require "orthographic.camera"
 
 local function init_fadein(self)
 	self.spawn_time = 0
@@ -170,18 +169,18 @@ end
 
 function spawn_floating_text(world_x, world_y, point_plus)
 	-- 화면 좌표를 GUI 좌표로 변환
-	local screen_pos = camera.world_to_screen(nil, vmath.vector3(world_x, world_y, 0))
-	local gui_pos = vmath.vector3(screen_pos.x, screen_pos.y, 0)
+	-- local screen_pos = camera.world_to_screen(nil, vmath.vector3(world_x, world_y, 0))
+	-- local gui_pos = vmath.vector3(world_x, world_y, 0)
 
 	local factory_url = msg.url("floating_text#factory")
 	local obj = factory.create(factory_url)
 
 	-- GUI에 좌표 전달
-	msg.post(obj, "set_start_pos", { pos = gui_pos })
+	msg.post(obj, "set_start_pos", { world_pos = vmath.vector3(world_x, world_y, 0) })
 	msg.post(obj, "set_text", { text = "+" .. point_plus })
 
 	-- 1.5초 후에 obj 삭제
-	timer.delay(1.5, false, function()
+	timer.delay(2, false, function()
 		go.delete(obj)
 	end)
 end

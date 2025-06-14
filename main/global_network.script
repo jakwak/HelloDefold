@@ -19,8 +19,8 @@ local previous_state = nil
 
 -- 시작 위치 설정 (옵션)
 local join_options = {
-  x = 480,  -- 원하는 시작 x 좌표 (주석 해제하면 사용)
-  y = 320,   -- 원하는 시작 y 좌표 (주석 해제하면 사용)
+  -- x = 480,  -- 원하는 시작 x 좌표 (주석 해제하면 사용)
+  -- y = 320,   -- 원하는 시작 y 좌표 (주석 해제하면 사용)
   username = utils.get_username()
 }
 
@@ -84,11 +84,7 @@ function on_message(self, message_id, message, sender)
   if message_id == hash("factory_created") and _G.network_connected then
     msg.post(sender, "network_connected")
   end
-  if message_id == hash("__playground_message_types") then
-    print("playground_message_types: ", message)
-  end
   if message_id == hash("player_type") then
-    print("player_type: ", message.type)
     join_options.type = message.type
     connect_to_server()
   end

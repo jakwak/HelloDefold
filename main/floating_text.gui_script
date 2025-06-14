@@ -1,34 +1,43 @@
-go.property("start_pos", vmath.vector3())
+local camera = require "orthographic.camera"
 
-local SPEED = 10
-local DURATION = 1.0
+local SPEED = 30
+local DURATION = 1.5
 
 function init(self)
   self.timer = 0
-  -- gui.set_position(gui.get_node("label"), self.start_pos)
+  self.world_pos = vmath.vector3(0, 0, 0)
+  self.label = gui.get_node("label")
+  
+  -- 초기 위치 설정
+  local screen_pos = camera.world_to_screen(nil, self.world_pos)
+  gui.set_position(self.label, screen_pos)
 end
 
 function update(self, dt)
   self.timer = self.timer + dt
   if self.timer >= DURATION then
-    gui.delete_node(gui.get_node("label"))
+    gui.delete_node(self.label)
     msg.post(".", "disable")
-  else
-    local pos = gui.get_position(gui.get_node("label"))
-    pos.y = pos.y + SPEED * dt
-    gui.set_position(gui.get_node("label"), pos)
+  else    
+    -- 월드 좌표 업데이트
+    self.world_pos.y = self.world_pos.y + SPEED * dt
+    
+    -- 화면 좌표로 변환
+    local screen_pos = camera.world_to_screen(nil, self.world_pos)
+    gui.set_position(self.label, screen_pos)
 
     -- 투명도 줄이기
     local alpha = 1.0 - self.timer / DURATION
-    gui.set_color(gui.get_node("label"), vmath.vector4(1, 0, 0, alpha))
+    gui.set_color(self.label, vmath.vector4(1, 0, 0, alpha))
   end
 end
 
 function on_message(self, message_id, message, sender)
   if message_id == hash("set_text") then
-    gui.set_text(gui.get_node("label"), message.text)
+    gui.set_text(self.label, message.text)
   elseif message_id == hash("set_start_pos") then
-    self.start_pos = message.pos
-    gui.set_position(gui.get_node("label"), self.start_pos)
+    self.world_pos = message.world_pos
+    local screen_pos = camera.world_to_screen(nil, self.world_pos)
+    gui.set_position(self.label, screen_pos)
   end
 end
