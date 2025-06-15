@@ -1,0 +1,32 @@
+script: "/main/hp_bar.gui_script"
+nodes {
+  position {
+    y: 50.0
+  }
+  size {
+    x: 50.0
+    y: 8.0
+  }
+  type: TYPE_BOX
+  id: "bg"
+  inherit_alpha: true
+}
+nodes {
+  position {
+    y: 50.0
+  }
+  size {
+    x: 48.0
+    y: 6.0
+  }
+  color {
+    x: 0.62
+    y: 0.18
+    z: 0.196
+  }
+  type: TYPE_BOX
+  id: "fill"
+  inherit_alpha: true
+}
+material: "/builtins/materials/gui.material"
+adjust_reference: ADJUST_REFERENCE_PARENT

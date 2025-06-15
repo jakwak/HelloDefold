@@ -5,22 +5,23 @@ local camera = require "orthographic.camera"
 local room = nil
 
 function init(self)
-	msg.post(".", "acquire_input_focus") -- 입력 포커스 획득
+	msg.post(".", "acquire_input_focus") -- 입력 포커스 획
+	self.hp_bar_url = msg.url("#hp_bar")    -- 현재 게임 오브젝트의 hp_bar 컴포넌트 URL 저장
+
 	self.target_dir = vmath.vector3(0, 1, 0) -- 위쪽(y+)을 기본 방향으로!
 	self.target_pos = nil
-	self.current_angle = math.pi / 2 -- 90도(라디안)로 초기화
+	self.current_angle = math.pi / 2        -- 90도(라디안)로 초기화
 
 	self.sprite_id = factory.create("#airplane_factory", vmath.vector3(0, 0, 0))
-	go.set_parent(self.sprite_id, go.get_id(), false)  -- false = 상대좌표 유지
+	go.set_parent(self.sprite_id, go.get_id(), false) -- false = 상대좌표 유지
 	go.set_rotation(vmath.quat_rotation_z(self.current_angle), self.sprite_id)
-	
+
 
 	msg.post(msg.url("#sprite"), "disable")
 
-		-- 크기 애니메이션 설정
- 	go.set_scale(0.1, self.sprite_id)  -- 초기 크기를 0으로 설정
- 	go.animate(self.sprite_id, "scale", go.PLAYBACK_ONCE_FORWARD, 1, go.EASING_LINEAR, 1)
- 
+	-- 크기 애니메이션 설정
+	go.set_scale(0.1, self.sprite_id) -- 초기 크기를 0으로 설정
+	go.animate(self.sprite_id, "scale", go.PLAYBACK_ONCE_FORWARD, 1, go.EASING_LINEAR, 1)
 end
 
 function update(self, dt)
@@ -30,7 +31,7 @@ function update(self, dt)
 		go.set_position(new_pos)
 
 		-- 목표 각도 계산
-		local target_angle = math.atan2(self.target_dir.y, self.target_dir.x) - math.pi/2
+		local target_angle = math.atan2(self.target_dir.y, self.target_dir.x) - math.pi / 2
 		-- 현재 각도와 목표 각도 사이를 slerp로 보간
 		-- 각도 wrap-around(2파이 넘는 문제) 보정
 		local function angle_lerp(a, b, t)
@@ -68,6 +69,9 @@ function update(self, dt)
 					end)
 					callbacks:listen(player, "hp", function(cur_val, prev_val)
 						self.hp = cur_val
+
+						msg.post(self.hp_bar_url, "update_hp", { hp = self.hp })
+
 						if self.hp > 0 and self.hp < 100 then
 							msg.post(self.sprite_id, "explode")
 						end
@@ -76,19 +80,13 @@ function update(self, dt)
 			end)
 		end
 	end
-end
 
-function fixed_update(self, dt)
-	-- This function is called if 'Fixed Update Frequency' is enabled in the Engine section of game.project
-	-- Can be coupled with fixed updates of the physics simulation if 'Use Fixed Timestep' is enabled in
-	-- Physics section of game.project
-	-- Add update code here
-	-- Learn more: https://defold.com/manuals/script/
-	-- Remove this function if not needed
+	-- 플레이어 위치 업데이트 메시지 전송
+	local pos = go.get_position()
+	msg.post("#hp_bar", "update_player_position", { x = pos.x, y = pos.y, z = pos.z })
 end
 
 function on_message(self, message_id, message, sender)
-
 	if message_id == hash("set_player_info") then
 		if message.username then
 			self.username = message.username
@@ -96,11 +94,12 @@ function on_message(self, message_id, message, sender)
 		end
 		if message.size then
 			self.size = message.size
-			go.set("#sprite", "scale", vmath.vector3(self.size/32 * 4, self.size/32 * 4, 1))
+			go.set("#sprite", "scale", vmath.vector3(self.size / 32 * 4, self.size / 32 * 4, 1))
 		end
 		if message.color then
 			self.color = message.color
-			go.set("#sprite", "tint", utils.hex_to_v4(tostring(self.color)))
+			local color_v4 = utils.hex_to_v4(tostring(self.color))
+			go.set("#label", "color", color_v4)
 		end
 		if message.type then
 			msg.post(self.sprite_id, "airplane_type", { type = message.type })
@@ -118,7 +117,9 @@ function on_input(self, action_id, action)
 		if room then
 			room:send("move", { x = dir.x, y = dir.y })
 			local cur_pos = go.get_position()
-			room:send("shoot_bullet", { x = cur_pos.x, y = cur_pos.y, dirx = dir.x, diry = dir.y, power = 20, velocity = 10, owner_id = room.session_id, type = "player_bullet" })
+			room:send("shoot_bullet",
+				{ x = cur_pos.x, y = cur_pos.y, dirx = dir.x, diry = dir.y, power = 20, velocity = 10, owner_id = room
+				.session_id, type = "player_bullet" })
 
 			room:send("spawn_npc")
 		end

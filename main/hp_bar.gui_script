@@ -1,0 +1,63 @@
+local camera = require "orthographic.camera"
+
+function init(self)
+    self.hp_bg = gui.get_node("bg")
+    self.hp_fill = gui.get_node("fill")
+    self.max_hp = 100
+    self.current_hp = 100
+    self.target_hp = 100  -- 목표 HP 추가
+    self.player_pos = vmath.vector3(0, 0, 0) -- 플레이어 위치 저장용
+    self.hp_offset = vmath.vector3(0, 40, 0) -- HP 바 오프셋 저장
+    
+    -- 초기 HP 바 설정
+    gui.set_size(self.hp_fill, vmath.vector3(50, 6, 0))
+    gui.set_size(self.hp_bg, vmath.vector3(52, 8, 0))
+end
+
+function update(self, dt)
+    -- 플레이어 월드 좌표를 스크린 좌표로 변환
+    local screen_pos = camera.world_to_screen(nil, self.player_pos)
+    
+    -- HP 바를 플레이어 위쪽에 위치시키기
+    local hp_bar_pos = screen_pos + self.hp_offset
+    gui.set_position(self.hp_bg, hp_bar_pos)
+    
+    -- HP 바의 위치는 배경의 위치를 기준으로 계산 (오른쪽에서 왼쪽으로 줄어들도록)
+    local fill_pos = hp_bar_pos
+    local current_fill_width = gui.get_size(self.hp_fill).x
+    fill_pos.x = fill_pos.x + (50 - current_fill_width) / 2  -- 배경 중앙에서 오른쪽으로 정렬
+
+    gui.set_position(self.hp_fill, fill_pos)
+end
+
+function on_message(self, message_id, message, sender)
+    if message_id == hash("update_hp") then
+        print("HP 업데이트:", message.hp, "최대 HP:")
+        self.target_hp = message.hp  -- 목표 HP로 설정
+        self.max_hp = message.max_hp or 100
+        
+        -- HP 비율 계산
+        local hp_ratio = self.target_hp / self.max_hp
+        local target_width = 50 * hp_ratio
+        
+        -- HP 바 크기 애니메이션
+        gui.animate(self.hp_fill, gui.PROP_SIZE, vmath.vector3(target_width, 6, 0), gui.EASING_OUTQUAD, 0.5)
+        
+        -- HP에 따른 색상 변경 (애니메이션)
+        local target_color
+        if hp_ratio > 0.6 then
+            target_color = vmath.vector4(0, 1, 0, 1) -- 초록색
+        elseif hp_ratio > 0.3 then
+            target_color = vmath.vector4(1, 0.8, 0, 1) -- 노란색
+        else
+            target_color = vmath.vector4(1, 0, 0, 1) -- 빨간색
+        end
+        gui.animate(self.hp_fill, gui.PROP_COLOR, target_color, gui.EASING_OUTQUAD, 0.3)
+        
+        -- 현재 HP 업데이트
+        self.current_hp = self.target_hp
+    elseif message_id == hash("update_player_position") then
+        -- 플레이어 위치 업데이트
+        self.player_pos = vmath.vector3(message.x, message.y, message.z or 0)
+    end
+end

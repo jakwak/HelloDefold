@@ -10,6 +10,8 @@ function init(self)
   self.size = 0
   self.color = ""
 
+  self.hp_bar_url = msg.url("#hp_bar")    -- 현재 게임 오브젝트의 hp_bar 컴포넌트 URL 저장
+
   -- 방향 관련 변수 초기화
   self.current_angle = math.pi / 2         -- 90도(라디안)로 초기화
   self.target_dir = vmath.vector3(0, 1, 0) -- 초기 방향
@@ -50,6 +52,10 @@ function update(self, dt)
   self.x = self.x + (self.target_x - self.x) * lerp_factor
   self.y = self.y + (self.target_y - self.y) * lerp_factor
   go.set_position(vmath.vector3(self.x, self.y, 0))
+
+  	-- 플레이어 위치 업데이트 메시지 전송
+	local pos = go.get_position()
+	msg.post("#hp_bar", "update_player_position", { x = pos.x, y = pos.y, z = pos.z })
 end
 
 function on_message(self, message_id, message, sender)
@@ -64,7 +70,8 @@ function on_message(self, message_id, message, sender)
     end
     if message.color then
       self.color = message.color
-      go.set("#sprite", "tint", utils.hex_to_v4(tostring(self.color)))
+			local color_v4 = utils.hex_to_v4(tostring(self.color))
+			go.set("#label", "color", color_v4)
     end
     if message.x then
       self.target_x = message.x
@@ -82,6 +89,9 @@ function on_message(self, message_id, message, sender)
     end
     if message.hp then
       self.hp = message.hp
+
+      msg.post(self.hp_bar_url, "update_hp", { hp = self.hp })
+
       if self.hp > 0 and self.hp < 100 then
         msg.post(self.sprite_id, "explode")
       end

@@ -2,6 +2,10 @@ components {
   id: "others"
   component: "/main/others.script"
 }
+components {
+  id: "hp_bar"
+  component: "/main/hp_bar.gui"
+}
 embedded_components {
   id: "sprite"
   type: "sprite"
@@ -24,7 +28,6 @@ embedded_components {
   "  x: 128.0\n"
   "  y: 32.0\n"
   "}\n"
-  "blend_mode: BLEND_MODE_SCREEN\n"
   "text: \"ABCD\"\n"
   "font: \"/assets/fonts/korean.font\"\n"
   "material: \"/builtins/fonts/label-df.material\"\n"

@@ -6,6 +6,10 @@ components {
   id: "controller"
   component: "/main/controller.script"
 }
+components {
+  id: "hp_bar"
+  component: "/main/hp_bar.gui"
+}
 embedded_components {
   id: "sprite"
   type: "sprite"
@@ -28,7 +32,6 @@ embedded_components {
   "  x: 128.0\n"
   "  y: 32.0\n"
   "}\n"
-  "blend_mode: BLEND_MODE_SCREEN\n"
   "text: \"ABCD\"\n"
   "font: \"/assets/fonts/korean.font\"\n"
   "material: \"/builtins/fonts/label-df.material\"\n"
@@ -37,8 +40,8 @@ embedded_components {
     y: 20.0
   }
   scale {
-    x: 0.5
-    y: 0.5
+    x: 0.7
+    y: 0.7
   }
 }
 embedded_components {
