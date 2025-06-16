@@ -9,7 +9,7 @@ textures {
 }
 nodes {
   position {
-    x: 504.0
+    x: 928.0
     y: 599.0
   }
   size {
@@ -22,9 +22,10 @@ nodes {
     z: 0.0
   }
   type: TYPE_TEXT
-  text: "NPC \352\260\257\354\210\230 : 0 \352\260\234"
+  text: "NPCs : 0"
   font: "korean"
   id: "npcs"
+  pivot: PIVOT_E
   inherit_alpha: true
 }
 nodes {
@@ -70,6 +71,27 @@ nodes {
   id: "model4"
   inherit_alpha: true
   size_mode: SIZE_MODE_AUTO
+}
+nodes {
+  position {
+    x: 555.0
+    y: 599.0
+  }
+  size {
+    x: 200.0
+    y: 100.0
+  }
+  color {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+  }
+  type: TYPE_TEXT
+  text: "00000"
+  font: "korean"
+  id: "point"
+  pivot: PIVOT_E
+  inherit_alpha: true
 }
 material: "/builtins/materials/gui.material"
 adjust_reference: ADJUST_REFERENCE_PARENT
