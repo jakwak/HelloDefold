@@ -32,7 +32,6 @@ end
 
 function on_message(self, message_id, message, sender)
     if message_id == hash("update_hp") then
-        print("HP 업데이트:", message.hp, "최대 HP:")
         self.target_hp = message.hp  -- 목표 HP로 설정
         self.max_hp = message.max_hp or 100
         

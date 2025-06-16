@@ -78,7 +78,7 @@ function update(self, dt)
 					callbacks:listen(player, "point", function(cur_val, prev_val)
 						self.point = cur_val
 						msg.post("gui#gui", "point_update", { point = self.point })
-						msg.post("gui#gui", "online_player_update", { player_id = session_id, name = player.username, point = self.point })
+						msg.post("gui#gui", "online_player_update", { player_id = session_id, name = player.username, point = self.point, color = player.color })
 					end)
 				end
 			end)

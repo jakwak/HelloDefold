@@ -1,6 +1,7 @@
 local npc_count = 0
 local online_players = {}
-local score_nodes = {} -- 생성된 노드들을 저장할 테이블
+local player_nodes = {}
+local utils = require "main.utils"  -- utils 모듈 추가
 
 -- 모델 설정
 local models = { "model1", "model2", "model3", "model4" }
@@ -66,86 +67,13 @@ local function arrange_models_responsive(self)
 	end
 end
 
--- 동적으로 텍스트 노드 생성 (함수를 먼저 선언)
-local function create_score_nodes(self)
-	-- 기존 노드들 제거
-	for _, node in ipairs(score_nodes) do
-		gui.delete_node(node)
+-- 테이블의 요소 개수를 세는 함수
+local function table_count(t)
+	local count = 0
+	for _ in pairs(t) do
+		count = count + 1
 	end
-	score_nodes = {}
-
-	-- 화면 크기 가져오기
-	local screen_width = gui.get_width()
-	local screen_height = gui.get_height()
-
-	-- 새로운 노드들 생성
-	local start_y = screen_height - 100 -- 상단에서 100픽셀 아래
-	local spacing = 30                 -- 노드 간 간격
-
-	-- for i = 1, #online_players do
-		print("online_players", online_players["player1"].name, online_players["player1"].point)
-		-- 새로운 텍스트 노드 생성
-		local node = gui.new_text_node(vmath.vector3(20, 400, 0), "Player ")
-
-		-- 노드 속성 설정
-		gui.set_pivot(node, gui.PIVOT_NW)
-		gui.set_scale(node, vmath.vector3(1, 1, 1))
-		gui.set_color(node, vmath.vector4(1, 0, 0, 1)) -- 빨간색으로 설정
-		gui.set_font(node, "korean")
-
-		-- 노드 크기 설정
-		gui.set_size(node, vmath.vector3(200, 30, 0))
-
-		-- 노드 저장
-		table.insert(score_nodes, node)
-
-		-- 디버그용 출력
-		print("Created node at position:", 400)
-	-- end
-end
-
--- 온라인 플레이어 점수 표시 업데이트
-local function update_online_scores(self)
-	-- 플레이어 정보를 점수 순으로 정렬
-	local sorted_players = {}
-	for player_id, player_info in pairs(online_players) do
-		table.insert(sorted_players, {
-			id = player_id,
-			name = player_info.name,
-			point = player_info.point
-		})
-	end
-
-	-- 점수 순으로 정렬
-	table.sort(sorted_players, function(a, b)
-		return a.point > b.point
-	end)
-
-	-- 노드 수가 부족하면 추가 생성
-	if #score_nodes < #sorted_players then
-		create_score_nodes(self)
-	end
-
-	-- 각 노드에 플레이어 정보 표시
-	for i, player in ipairs(sorted_players) do
-		if score_nodes[i] then
-			local score_text = string.format("%d. %s: %d",
-				i,
-				player.name,
-				player.point
-			)
-			gui.set_text(score_nodes[i], score_text)
-			gui.set_enabled(score_nodes[i], true)           -- 노드 활성화
-			print("Updated node", i, "with text:", score_text) -- 디버그용 출력
-		end
-	end
-
-	-- 사용하지 않는 노드 숨기기
-	for i = #sorted_players + 1, #score_nodes do
-		if score_nodes[i] then
-			gui.set_enabled(score_nodes[i], false)
-		end
-	end
+	return count
 end
 
 function init(self)
@@ -154,7 +82,6 @@ function init(self)
 	self.point = gui.get_node("point")
 	gui.set_text(self.point, "Point: 0")
 
-	-- 모델 노드와 상태 초기화
 	self.nodes = {}
 	self.hovered = {}
 
@@ -167,21 +94,13 @@ function init(self)
 	arrange_point(self)
 	arrange_models_horizontal(self)
 
-	-- 테스트용 플레이어 데이터 추가
-	online_players = {
-		player1 = { name = "Player 1", point = 100 },
-		player2 = { name = "Player 2", point = 200 },
-		player3 = { name = "Player 3", point = 300 }
-	}
-
-	-- 초기 노드들 생성
-	create_score_nodes(self)
-	-- update_online_scores(self)
+	-- 플레이어 노드 초기화
+	player_nodes = {}
+	-- online_players = {} -- 서버에서 메시지로 받으므로 초기화 필요 없음
 
 	msg.post(".", "acquire_input_focus")
 end
 
--- 온라인 플레이어 정보 업데이트
 function on_message(self, message_id, message, sender)
 	if message_id == hash("npc_add") then
 		npc_count = npc_count + 1
@@ -192,11 +111,39 @@ function on_message(self, message_id, message, sender)
 	elseif message_id == hash("point_update") then
 		gui.set_text(self.point, "Point: " .. message.point)
 	elseif message_id == hash("online_player_update") then
-		online_players[message.player_id] = {
-			name = message.name,
-			point = message.point
-		}
-		update_online_scores(self)
+		-- message.player_id, message.name, message.point
+		local id = message.player_id
+		local name = message.name
+		local point = message.point
+		local color = message.color
+		-- 플레이어 정보 저장
+		online_players[id] = { name = name, point = point }
+
+		-- 노드가 없으면 새로 생성
+		if not player_nodes[id] then
+			local y = 400 - 30 * (table_count(player_nodes))
+			local node = gui.new_text_node(vmath.vector3(30, y, 0), "")
+			-- color를 vector4로 변환
+			local color_v4 = utils.hex_to_v4(tostring(color))
+			gui.set_color(node, color_v4)
+			gui.set_pivot(node, gui.PIVOT_NW)
+			gui.set_font(node, "korean")
+			gui.set_size(node, vmath.vector3(200, 30, 0))
+			gui.set_scale(node, vmath.vector3(0.7, 0.7, 0.7))
+			player_nodes[id] = node
+		end
+		-- 텍스트 갱신
+		local text = string.format("%s: %d", name, point)
+		gui.set_text(player_nodes[id], text)
+		gui.set_enabled(player_nodes[id], true)
+
+		-- 남아있는 노드 중 online_players에 없는 것은 삭제
+		for pid, node in pairs(player_nodes) do
+			if not online_players[pid] then
+				gui.delete_node(node)
+				player_nodes[pid] = nil
+			end
+		end
 	end
 end
 
@@ -236,13 +183,10 @@ end
 
 function on_reload(self)
 	print("GUI script reloaded")
-	create_score_nodes(self)
-	update_online_scores(self)
 end
 
--- 노드 정리
 function final(self)
-	for _, node in ipairs(score_nodes) do
+	for _, node in pairs(player_nodes) do
 		gui.delete_node(node)
 	end
 end
