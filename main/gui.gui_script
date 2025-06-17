@@ -67,15 +67,6 @@ local function arrange_models_responsive(self)
 	end
 end
 
--- 테이블의 요소 개수를 세는 함수
-local function table_count(t)
-	local count = 0
-	for _ in pairs(t) do
-		count = count + 1
-	end
-	return count
-end
-
 -- 플레이어를 점수 기준으로 정렬하고 순위를 매기는 함수
 local function sort_and_arrange_players()
 	-- 플레이어 데이터를 배열로 변환하고 점수 기준으로 정렬
