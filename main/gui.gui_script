@@ -76,6 +76,38 @@ local function table_count(t)
 	return count
 end
 
+-- 플레이어를 점수 기준으로 정렬하고 순위를 매기는 함수
+local function sort_and_arrange_players()
+	-- 플레이어 데이터를 배열로 변환하고 점수 기준으로 정렬
+	local sorted_players = {}
+	for id, player_data in pairs(online_players) do
+		table.insert(sorted_players, {
+			id = id,
+			name = player_data.name,
+			point = player_data.point
+		})
+	end
+	
+	-- 점수 기준으로 내림차순 정렬 (높은 점수가 위로)
+	table.sort(sorted_players, function(a, b)
+		return a.point > b.point
+	end)
+	
+	-- 정렬된 순서대로 노드 위치 재배치 및 텍스트 업데이트
+	for i, player_data in ipairs(sorted_players) do
+		local id = player_data.id
+		local node = player_nodes[id]
+		if node then
+			local y = 400 - 30 * (i - 1)
+			gui.set_position(node, vmath.vector3(30, y, 0))
+			
+			-- 순위와 함께 텍스트 업데이트
+			local rank_text = string.format("%d등 %s %d", i, player_data.name, player_data.point)
+			gui.set_text(node, rank_text)
+		end
+	end
+end
+
 function init(self)
 	self.npcs_node = gui.get_node("npcs")
 	gui.set_text(self.npcs_node, "NPCs: " .. npc_count)
@@ -121,8 +153,7 @@ function on_message(self, message_id, message, sender)
 
 		-- 노드가 없으면 새로 생성
 		if not player_nodes[id] then
-			local y = 400 - 30 * (table_count(player_nodes))
-			local node = gui.new_text_node(vmath.vector3(30, y, 0), "")
+			local node = gui.new_text_node(vmath.vector3(30, 400, 0), "")
 			-- color를 vector4로 변환
 			local color_v4 = utils.hex_to_v4(tostring(color))
 			gui.set_color(node, color_v4)
@@ -132,18 +163,21 @@ function on_message(self, message_id, message, sender)
 			gui.set_scale(node, vmath.vector3(0.7, 0.7, 0.7))
 			player_nodes[id] = node
 		end
-		-- 텍스트 갱신
-		local text = string.format("%s: %d", name, point)
-		gui.set_text(player_nodes[id], text)
-		gui.set_enabled(player_nodes[id], true)
+		
+		-- 점수 기준으로 정렬하고 재배치
+		sort_and_arrange_players()
 
-		-- 남아있는 노드 중 online_players에 없는 것은 삭제
-		for pid, node in pairs(player_nodes) do
-			if not online_players[pid] then
-				gui.delete_node(node)
-				player_nodes[pid] = nil
-			end
+	elseif message_id == hash("online_player_remove") then
+		local id = message.player_id
+		if player_nodes[id] then
+			gui.delete_node(player_nodes[id])
+			player_nodes[id] = nil
 		end
+		-- 플레이어 데이터에서도 제거
+		online_players[id] = nil
+		
+		-- 삭제 후 점수 기준으로 다시 정렬
+		sort_and_arrange_players()
 	end
 end
 

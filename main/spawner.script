@@ -130,6 +130,11 @@ local function on_remove_player(self, _, session_id)
 	
 	-- 안전한 정리 함수 사용
 	safe_cleanup_object(self, session_id, obj)
+
+	-- 삭제 완료 후 메시지 전송
+	timer.delay(0.1, false, function()
+		msg.post("gui#gui", "online_player_remove", { player_id = session_id })
+	end)
 end
 
 local function on_remove_npc(self, npc, _)
