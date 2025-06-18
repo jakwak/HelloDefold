@@ -38,11 +38,36 @@ function init(self)
   -- connect_to_server()
 end
 
+-- HTML5에서 hostname 가져오는 함수
+local function get_html5_hostname()
+  local info = sys.get_sys_info()
+  if info.system_name == "HTML5" then
+    -- JavaScript를 실행하여 현재 hostname 가져오기
+    local hostname = html5.run("window.location.hostname")
+    local protocol = html5.run("window.location.protocol")
+    local port = html5.run("window.location.port")
+    
+    print("현재 hostname:", hostname)
+    print("현재 protocol:", protocol)
+    print("현재 port:", port)
+    
+    return hostname, protocol, port
+  end
+  return nil, nil, nil
+end
+
 function connect_to_server()
   print("서버 접속 시도:", SERVER_URL, "룸:", ROOM_NAME)
 
-  -- local client = Colyseus.Client({hostname = SERVER_URL, use_ssl = true, port = 443})
-  local client = Colyseus.Client(SERVER_URL)
+  local hostname, protocol, port = get_html5_hostname()
+
+  local client = nil
+
+  if hostname == "gxg.kro.kr" then
+    client = Colyseus.Client({hostname = "gxg.kro.kr/game-server/", use_ssl = true, port = 443})
+  else
+    client = Colyseus.Client("ws://localhost:2567")
+  end
 
   client:join_or_create(ROOM_NAME, join_options, function(err, room)
     if err then

@@ -3,7 +3,7 @@ local camera                = require "orthographic.camera"
 local utils                 = require "main.utils"
 local room                  = nil
 
-local MAX_BULLET_POOL_SIZE  = 100
+local MAX_BULLET_POOL_SIZE  = 50
 local MAX_MISSILE_POOL_SIZE = 20
 
 local function get_bullet_from_pool(self)
@@ -32,7 +32,6 @@ local function return_bullet_to_pool(self, bullet)
 	if go.exists(bullet) then
 		timer.delay(0.1, false, function()
 			if not go.exists(bullet) then return end
-			print("return_bullet_to_pool: ", bullet)
 			msg.post(bullet, "disable")
 			msg.post(bullet, "set_alpha", { alpha = 0 })
 			go.set_position(vmath.vector3(-1000, -1000, 0), bullet)
