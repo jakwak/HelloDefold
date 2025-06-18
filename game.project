@@ -14,8 +14,8 @@ show_fullscreen_button = 1
 show_made_with_defold = 0
 cssfile = /custom/web/style.css
 htmlfile = /builtins/manifests/web/engine_template.html
-heap_size = 256
-wasm_streaming = 0
+heap_size = 1024
+wasm_streaming = 1
 external_communication = true
 include_dev_tool = 1
 

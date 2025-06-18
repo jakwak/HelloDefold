@@ -3,7 +3,8 @@ local Colyseus = require "colyseus.sdk"
 local utils = require "main.utils"
 
 -- 서버 연결 설정
-local SERVER_URL = "gxg.kro.kr/game-server/"
+-- local SERVER_URL = "gxg.kro.kr/game-server/"
+local SERVER_URL = "ws://localhost:2567"
 local ROOM_NAME = "matter_room"
 
 -- 전역 변수들
@@ -40,7 +41,8 @@ end
 function connect_to_server()
   print("서버 접속 시도:", SERVER_URL, "룸:", ROOM_NAME)
 
-  local client = Colyseus.Client({hostname = SERVER_URL, use_ssl = true, port = 443})
+  -- local client = Colyseus.Client({hostname = SERVER_URL, use_ssl = true, port = 443})
+  local client = Colyseus.Client(SERVER_URL)
 
   client:join_or_create(ROOM_NAME, join_options, function(err, room)
     if err then

@@ -29,7 +29,6 @@ function on_message(self, message_id, message, sender)
 		if message.y then
 			self.target_pos.y = message.y
 		end
-
 	end
 end
 

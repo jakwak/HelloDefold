@@ -1,13 +1,79 @@
-local Colyseus = require "colyseus.sdk"
-local camera = require "orthographic.camera"
-local utils = require "main.utils"
-local room     = nil
+local Colyseus              = require "colyseus.sdk"
+local camera                = require "orthographic.camera"
+local utils                 = require "main.utils"
+local room                  = nil
+
+local MAX_BULLET_POOL_SIZE  = 100
+local MAX_MISSILE_POOL_SIZE = 20
+
+local function get_bullet_from_pool(self)
+	if #self.bullet_pool > 0 then
+		local bullet = table.remove(self.bullet_pool)
+		msg.post(bullet, "enable")
+		return bullet
+	else
+		-- 풀이 비어있으면 새로 생성
+		return factory.create(self.bullet_factory_url, vmath.vector3(0, 0, 0))
+	end
+end
+
+local function get_missile_from_pool(self)
+	if #self.missile_pool > 0 then
+		local missile = table.remove(self.missile_pool)
+		msg.post(missile, "enable")
+		return missile
+	else
+		-- 풀이 비어있으면 새로 생성
+		return factory.create(self.missile_factory_url, vmath.vector3(0, 0, 0))
+	end
+end
+
+local function return_bullet_to_pool(self, bullet)
+	if go.exists(bullet) then
+		timer.delay(0.1, false, function()
+			if not go.exists(bullet) then return end
+			print("return_bullet_to_pool: ", bullet)
+			msg.post(bullet, "disable")
+			msg.post(bullet, "set_alpha", { alpha = 0 })
+			go.set_position(vmath.vector3(-1000, -1000, 0), bullet)
+		end)
+
+		-- 풀 크기 제한 확인
+		if #self.bullet_pool < MAX_BULLET_POOL_SIZE then
+			table.insert(self.bullet_pool, bullet)
+		else
+			-- 풀이 가득 찬 경우 객체 삭제
+			go.delete(bullet, true)
+		end
+	end
+end
+
+local function return_missile_to_pool(self, missile)
+	if go.exists(missile) then
+		msg.post(missile, "disable")
+		msg.post(missile, "set_alpha", { alpha = 0 })
+		go.set_position(vmath.vector3(-1000, -1000, 0), missile)
+
+		-- 풀 크기 제한 확인
+		if #self.missile_pool < MAX_MISSILE_POOL_SIZE then
+			table.insert(self.missile_pool, missile)
+		else
+			-- 풀이 가득 찬 경우 객체 삭제
+			go.delete(missile, true)
+		end
+	end
+end
+
 
 -- 안전한 정리 함수
-local function safe_cleanup_object(self, id, obj)
+local function safe_cleanup_object(self, id, obj, is_missile)
 	if obj and go.exists(obj) then
-		pcall(function()
-			go.delete(obj)
+		timer.delay(0.1, false, function()
+			if is_missile then
+				return_missile_to_pool(self, obj)
+			else
+				return_bullet_to_pool(self, obj)
+			end
 		end)
 	end
 	self.spawned_objects[id] = nil
@@ -21,7 +87,8 @@ local function on_add_player(self, player, session_id, callbacks)
 	if session_id == room.session_id then
 		local obj = factory.create(self.player_factory_url, vmath.vector3(player.x, player.y, 0))
 		self.spawned_objects[session_id] = obj
-		msg.post(obj, "set_player_info", { username = player.username, size = player.size, color = player.color, type = player.type })
+		msg.post(obj, "set_player_info",
+			{ username = player.username, size = player.size, color = player.color, type = player.type })
 
 		-- 다음 프레임에서 따라가도록 지연 실행
 		timer.delay(0.1, false, function()
@@ -36,7 +103,8 @@ local function on_add_player(self, player, session_id, callbacks)
 	else
 		local obj = factory.create(self.others_factory_url, vmath.vector3(player.x, player.y, 0))
 		self.spawned_objects[session_id] = obj
-		msg.post(obj, "set_player_info", { username = player.username, size = player.size, color = player.color, type = player.type })
+		msg.post(obj, "set_player_info",
+			{ username = player.username, size = player.size, color = player.color, type = player.type })
 
 		-- 다른 플레이어 위치/방향 업데이트 리스너
 		callbacks:listen(player, "x", function(cur_val, prev_val)
@@ -55,7 +123,8 @@ local function on_add_player(self, player, session_id, callbacks)
 			msg.post(obj, "set_player_info", { hp = cur_val })
 		end)
 		callbacks:listen(player, "point", function(cur_val, prev_val)
-			msg.post("gui#gui", "online_player_update", { player_id = session_id, name = player.username, point = cur_val, color = player.color })
+			msg.post("gui#gui", "online_player_update",
+				{ player_id = session_id, name = player.username, point = cur_val, color = player.color })
 		end)
 	end
 end
@@ -87,12 +156,19 @@ end
 
 local function on_add_bullet(self, bullet, _, callbacks)
 	local obj = nil
+	local is_missile = false
+
 	if bullet.type == "npc_missile" then
-		obj = factory.create(self.missile_factory_url, vmath.vector3(bullet.x, bullet.y, 0))
+		obj = get_missile_from_pool(self)
+		is_missile = true
 	else
-		obj = factory.create(self.bullet_factory_url, vmath.vector3(bullet.x, bullet.y, 0))
+		obj = get_bullet_from_pool(self)
 	end
+
 	self.spawned_objects[bullet.id] = obj
+	-- 미사일 여부를 추적하기 위한 테이블 추가
+	self.object_types[bullet.id] = is_missile and "missile" or "bullet"
+
 	msg.post(obj, "set_bullet_info", {
 		id = bullet.id,
 		x = bullet.x,
@@ -127,9 +203,13 @@ local function on_remove_player(self, _, session_id)
 
 	-- 삭제 중 상태로 마킹
 	self.removing_objects[session_id] = true
-	
-	-- 안전한 정리 함수 사용
-	safe_cleanup_object(self, session_id, obj)
+
+	-- 플레이어는 기존 방식대로 삭제
+	if obj and go.exists(obj) then
+		go.delete(obj, true)
+	end
+	self.spawned_objects[session_id] = nil
+	self.removing_objects[session_id] = nil
 
 	-- 삭제 완료 후 메시지 전송
 	timer.delay(0.1, false, function()
@@ -149,15 +229,20 @@ local function on_remove_npc(self, npc, _)
 	if go.exists(obj) then
 		msg.post(obj, "die_npc")
 		msg.post("gui#gui", "npc_remove")
-		
+
 		-- 일정 시간 후 강제 정리 (애니메이션이 완료되지 않을 경우 대비)
 		timer.delay(2.0, false, function()
 			if self.spawned_objects[npc.id] then
-				safe_cleanup_object(self, npc.id, self.spawned_objects[npc.id])
+				if go.exists(self.spawned_objects[npc.id]) then
+					go.delete(self.spawned_objects[npc.id], true)
+				end
+				self.spawned_objects[npc.id] = nil
+				self.removing_objects[npc.id] = nil
 			end
 		end)
 	else
-		safe_cleanup_object(self, npc.id, obj)
+		self.spawned_objects[npc.id] = nil
+		self.removing_objects[npc.id] = nil
 	end
 end
 
@@ -169,14 +254,20 @@ local function on_remove_bullet(self, bullet, bullet_id)
 
 	-- 삭제 중 상태로 마킹
 	self.removing_objects[bullet_id] = true
-	
-	-- 안전한 정리 함수 사용
-	safe_cleanup_object(self, bullet_id, obj)
+
+	-- 미사일인지 확인하여 적절한 풀로 반환
+	local is_missile = self.object_types[bullet_id] == "missile"
+	safe_cleanup_object(self, bullet_id, obj, is_missile)
+
+	-- 타입 정보도 정리
+	self.object_types[bullet_id] = nil
 end
+
 
 function init(self)
 	self.spawned_objects = {}
-	self.removing_objects = {}  -- 삭제 중인 객체 추적
+	self.removing_objects = {} -- 삭제 중인 객체 추적
+	self.object_types = {}    -- 객체 타입 추적 (bullet/missile)
 	local my_id = msg.url()
 	msg.post("main:/managers#global_network", "register_listener", { id = my_id })
 
@@ -185,6 +276,24 @@ function init(self)
 	self.npc_factory_url = msg.url(nil, go.get_id(), "npc_factory")
 	self.bullet_factory_url = msg.url(nil, go.get_id(), "bullet_factory")
 	self.missile_factory_url = msg.url(nil, go.get_id(), "missile_factory")
+
+	-- 총알 풀과 미사일 풀 따로 생성
+	self.bullet_pool = {}
+	self.missile_pool = {}
+
+	-- 미리 총알 객체들을 생성해두기 (50개로 시작)
+	for i = 1, 50 do
+		local bullet = factory.create(self.bullet_factory_url, vmath.vector3(-1000, -1000, 0))
+		msg.post(bullet, "disable")
+		table.insert(self.bullet_pool, bullet)
+	end
+
+	-- 미리 미사일 객체들을 생성해두기 (20개로 시작)
+	for i = 1, 20 do
+		local missile = factory.create(self.missile_factory_url, vmath.vector3(-1000, -1000, 0))
+		msg.post(missile, "disable")
+		table.insert(self.missile_pool, missile)
+	end
 end
 
 function on_message(self, message_id, message, sender)
@@ -225,11 +334,15 @@ function on_message(self, message_id, message, sender)
 			on_remove_bullet(self, bullet, bullet_id)
 		end)
 
-	-- NPC 삭제 완료 알림 처리 (NPC 스크립트에서 애니메이션 완료 후 보내는 메시지)
+		-- NPC 삭제 완료 알림 처리 (NPC 스크립트에서 애니메이션 완료 후 보내는 메시지)
 	elseif message_id == hash("npc_deleted") then
 		local npc_id = message.id
 		if self.spawned_objects[npc_id] then
-			safe_cleanup_object(self, npc_id, self.spawned_objects[npc_id])
+			if go.exists(self.spawned_objects[npc_id]) then
+				go.delete(self.spawned_objects[npc_id], true)
+			end
+			self.spawned_objects[npc_id] = nil
+			self.removing_objects[npc_id] = nil
 		end
 	end
 end
