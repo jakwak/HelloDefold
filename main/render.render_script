@@ -10,11 +10,11 @@ function init(self)
 	self.text_pred = render.predicate({"debug_text"})
 	self.particle_pred = render.predicate({"particle"})
 
-	self.clear_color = vmath.vector4(0, 0, 0, 0)
-	self.clear_color.x = sys.get_config("render.clear_color_red", 0)
-	self.clear_color.y = sys.get_config("render.clear_color_green", 0)
-	self.clear_color.z = sys.get_config("render.clear_color_blue", 0)
-	self.clear_color.w = sys.get_config("render.clear_color_alpha", 0)
+	self.clear_color = vmath.vector4(0.5, 0.7, 1.0, 1.0) -- 원하는 색상
+	self.clear_color.x = sys.get_config("render.clear_color_red", 0.5)
+	self.clear_color.y = sys.get_config("render.clear_color_green", 0.7)
+	self.clear_color.z = sys.get_config("render.clear_color_blue", 1.0)
+	self.clear_color.w = sys.get_config("render.clear_color_alpha", 1.0)
 end
 
 function update(self)

@@ -44,3 +44,12 @@ max_particle_buffer_count = 5000
 [graphics]
 max_debug_vertices = 20000
 
+[render]
+clear_color_red = 0.5
+clear_color_green = 0.7
+clear_color_blue = 1.0
+
+[display]
+width = 1024
+height = 640
+
