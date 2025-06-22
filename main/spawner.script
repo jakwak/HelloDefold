@@ -6,72 +6,56 @@ local room                  = nil
 local MAX_BULLET_POOL_SIZE  = 50
 local MAX_MISSILE_POOL_SIZE = 20
 
-local function get_bullet_from_pool(self)
-	if #self.bullet_pool > 0 then
-		local bullet = table.remove(self.bullet_pool)
-		msg.post(bullet, "enable")
-		return bullet
+-- 통합된 풀에서 객체 가져오기 함수
+local function get_object_from_pool(self, object_type)
+	local pool = object_type == "missile" and self.missile_pool or self.bullet_pool
+	local factory_url = object_type == "missile" and self.missile_factory_url or self.bullet_factory_url
+	
+	if #pool > 0 then
+		local obj = table.remove(pool)
+		msg.post(obj, "enable")
+		return obj
 	else
 		-- 풀이 비어있으면 새로 생성
-		return factory.create(self.bullet_factory_url, vmath.vector3(0, 0, 0))
+		return factory.create(factory_url, vmath.vector3(0, 0, 0))
 	end
 end
 
-local function get_missile_from_pool(self)
-	if #self.missile_pool > 0 then
-		local missile = table.remove(self.missile_pool)
-		msg.post(missile, "enable")
-		return missile
-	else
-		-- 풀이 비어있으면 새로 생성
-		return factory.create(self.missile_factory_url, vmath.vector3(0, 0, 0))
-	end
-end
-
-local function return_bullet_to_pool(self, bullet)
-	if go.exists(bullet) then
-		timer.delay(0.1, false, function()
-			if not go.exists(bullet) then return end
-			msg.post(bullet, "disable")
-			msg.post(bullet, "set_alpha", { alpha = 0 })
-			go.set_position(vmath.vector3(-1000, -1000, 0), bullet)
-		end)
+-- 통합된 풀로 객체 반환 함수
+local function return_object_to_pool(self, obj, object_type)
+	if go.exists(obj) then
+		local pool = object_type == "missile" and self.missile_pool or self.bullet_pool
+		local max_size = object_type == "missile" and MAX_MISSILE_POOL_SIZE or MAX_BULLET_POOL_SIZE
+		
+		-- 미사일은 즉시 비활성화, 총알은 지연 후 비활성화
+		if object_type == "missile" then
+			msg.post(obj, "disable")
+		else
+			timer.delay(0.1, false, function()
+				if not go.exists(obj) then return end
+				msg.post(obj, "disable")
+			end)
+		end
 
 		-- 풀 크기 제한 확인
-		if #self.bullet_pool < MAX_BULLET_POOL_SIZE then
-			table.insert(self.bullet_pool, bullet)
+		if #pool < max_size then
+			table.insert(pool, obj)
 		else
 			-- 풀이 가득 찬 경우 객체 삭제
-			go.delete(bullet, true)
+			go.delete(obj)
+			print(object_type .. " to remove !!!!!! ---> ", obj)
 		end
 	end
 end
-
-local function return_missile_to_pool(self, missile)
-	if go.exists(missile) then
-		msg.post(missile, "disable")
-		msg.post(missile, "set_alpha", { alpha = 0 })
-		go.set_position(vmath.vector3(-1000, -1000, 0), missile)
-
-		-- 풀 크기 제한 확인
-		if #self.missile_pool < MAX_MISSILE_POOL_SIZE then
-			table.insert(self.missile_pool, missile)
-		else
-			-- 풀이 가득 찬 경우 객체 삭제
-			go.delete(missile, true)
-		end
-	end
-end
-
 
 -- 안전한 정리 함수
 local function safe_cleanup_object(self, id, obj, is_missile)
 	if obj and go.exists(obj) then
 		timer.delay(0.1, false, function()
 			if is_missile then
-				return_missile_to_pool(self, obj)
+				return_object_to_pool(self, obj, "missile")
 			else
-				return_bullet_to_pool(self, obj)
+				return_object_to_pool(self, obj, "bullet")
 			end
 		end)
 	end
@@ -103,7 +87,7 @@ local function on_add_player(self, player, session_id, callbacks)
 		local obj = factory.create(self.others_factory_url, vmath.vector3(player.x, player.y, 0))
 		self.spawned_objects[session_id] = obj
 		msg.post(obj, "set_player_info",
-			{ username = player.username, size = player.size, color = player.color, type = player.type })
+			{ username = player.username, size = player.size, color = player.color, type = player.type, hp = player.hp })
 
 		-- 다른 플레이어 위치/방향 업데이트 리스너
 		callbacks:listen(player, "x", function(cur_val, prev_val)
@@ -123,7 +107,7 @@ local function on_add_player(self, player, session_id, callbacks)
 		end)
 		callbacks:listen(player, "point", function(cur_val, prev_val)
 			msg.post("gui#gui", "online_player_update",
-				{ player_id = session_id, name = player.username, point = cur_val, color = player.color })
+				{ player_id = session_id, name = player.username, point = cur_val, color = player.color, score = player.score })
 		end)
 	end
 end
@@ -158,10 +142,10 @@ local function on_add_bullet(self, bullet, _, callbacks)
 	local is_missile = false
 
 	if bullet.type == "npc_missile" then
-		obj = get_missile_from_pool(self)
+		obj = get_object_from_pool(self, "missile")
 		is_missile = true
 	else
-		obj = get_bullet_from_pool(self)
+		obj = get_object_from_pool(self, "bullet")
 	end
 
 	self.spawned_objects[bullet.id] = obj

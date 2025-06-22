@@ -10,7 +10,7 @@ function init(self)
   self.size = 0
   self.color = ""
 
-  self.hp_bar_url = msg.url("#hp_bar")    -- 현재 게임 오브젝트의 hp_bar 컴포넌트 URL 저장
+  self.hp_bar_url = msg.url("#hp_bar") -- 현재 게임 오브젝트의 hp_bar 컴포넌트 URL 저장
 
   -- 방향 관련 변수 초기화
   self.current_angle = math.pi / 2         -- 90도(라디안)로 초기화
@@ -53,9 +53,9 @@ function update(self, dt)
   self.y = self.y + (self.target_y - self.y) * lerp_factor
   go.set_position(vmath.vector3(self.x, self.y, 0))
 
-  	-- 플레이어 위치 업데이트 메시지 전송
-	local pos = go.get_position()
-	msg.post("#hp_bar", "update_player_position", { x = pos.x, y = pos.y, z = pos.z })
+  -- 플레이어 위치 업데이트 메시지 전송
+  local pos = go.get_position()
+  msg.post("#hp_bar", "update_player_position", { x = pos.x, y = pos.y, z = pos.z })
 end
 
 function on_message(self, message_id, message, sender)
@@ -70,8 +70,8 @@ function on_message(self, message_id, message, sender)
     end
     if message.color then
       self.color = message.color
-			local color_v4 = utils.hex_to_v4(tostring(self.color))
-			go.set("#label", "color", color_v4)
+      local color_v4 = utils.hex_to_v4(tostring(self.color))
+      go.set("#label", "color", color_v4)
     end
     if message.x then
       self.target_x = message.x
@@ -88,8 +88,35 @@ function on_message(self, message_id, message, sender)
       msg.post(self.sprite_id, "airplane_type", { type = message.type })
     end
     if message.hp then
-      self.hp = message.hp
 
+      if not self.hp then
+        timer.delay(0.5, false, function()
+          local hp = message.hp or 100
+          local explode_count = 0
+
+          -- HP에 따라 폭발 횟수 결정
+          if hp <= 0 then
+            explode_count = 12
+          elseif hp <= 20 then
+            explode_count = 10
+          elseif hp <= 40 then
+            explode_count = 8
+          elseif hp <= 60 then
+            explode_count = 6
+          elseif hp <= 80 then
+            explode_count = 4
+          elseif hp < 100 then
+            explode_count = 2
+          end
+
+          -- 결정된 횟수만큼 폭발 효과 생성
+          for i = 1, explode_count do
+            msg.post(self.sprite_id, "explode")
+          end
+        end)
+      end
+
+      self.hp = message.hp
       msg.post(self.hp_bar_url, "update_hp", { hp = self.hp })
 
       if self.hp > 0 and self.hp < 100 then

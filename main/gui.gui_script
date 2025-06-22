@@ -75,13 +75,14 @@ local function sort_and_arrange_players()
 		table.insert(sorted_players, {
 			id = id,
 			name = player_data.name,
-			point = player_data.point
+			point = player_data.point,
+			score = player_data.score or 0
 		})
 	end
 	
 	-- 점수 기준으로 내림차순 정렬 (높은 점수가 위로)
 	table.sort(sorted_players, function(a, b)
-		return a.point > b.point
+		return a.score > b.score or (a.score == b.score and a.point > b.point)
 	end)
 	
 	-- 정렬된 순서대로 노드 위치 재배치 및 텍스트 업데이트
@@ -93,7 +94,7 @@ local function sort_and_arrange_players()
 			gui.set_position(node, vmath.vector3(30, y, 0))
 			
 			-- 순위와 함께 텍스트 업데이트
-			local rank_text = string.format("%d등 %s %d", i, player_data.name, player_data.point)
+			local rank_text = string.format("%d등 %s %d %d", i, player_data.name, player_data.point, player_data.score or 0)
 			gui.set_text(node, rank_text)
 		end
 	end
@@ -139,8 +140,10 @@ function on_message(self, message_id, message, sender)
 		local name = message.name
 		local point = message.point
 		local color = message.color
+		local score = message.score
+
 		-- 플레이어 정보 저장
-		online_players[id] = { name = name, point = point }
+		online_players[id] = { name = name, point = point, score = score }
 
 		-- 노드가 없으면 새로 생성
 		if not player_nodes[id] then
@@ -153,6 +156,8 @@ function on_message(self, message_id, message, sender)
 			gui.set_size(node, vmath.vector3(200, 30, 0))
 			gui.set_scale(node, vmath.vector3(0.7, 0.7, 0.7))
 			player_nodes[id] = node
+
+			print("new player---> ", id, name, point, score)
 		end
 		
 		-- 점수 기준으로 정렬하고 재배치
