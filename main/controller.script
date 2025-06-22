@@ -7,7 +7,7 @@ local NetworkConfig = require "main.network_config"
 local room = nil
 local target_dir = vmath.vector3(0, 1, 0) -- 위쪽(y+)을 기본 방향으로!
 local target_pos = nil
-local current_angle = math.pi / 2        -- 90도(라디안)로 초기화
+local current_angle = math.pi / 2         -- 90도(라디안)로 초기화
 local sprite_id = nil
 local hp_bar_url = nil
 
@@ -50,7 +50,7 @@ end
 -- 네트워크 콜백 설정 함수
 local function setup_network_callbacks(room)
 	local callbacks = Colyseus.callbacks(room)
-	
+
 	callbacks:on_add("players", function(player, session_id)
 		if session_id == room.session_id then
 			-- 위치 업데이트 콜백
@@ -60,48 +60,47 @@ local function setup_network_callbacks(room)
 				end
 				target_pos.x = cur_val
 			end)
-			
+
 			callbacks:listen(player, "y", function(cur_val, prev_val)
 				if not target_pos then
 					target_pos = go.get_position()
 				end
 				target_pos.y = cur_val
 			end)
-			
+
 			-- 방향 업데이트 콜백
 			callbacks:listen(player, "dirx", function(cur_val, prev_val)
 				target_dir.x = cur_val
 			end)
-			
+
 			callbacks:listen(player, "diry", function(cur_val, prev_val)
 				target_dir.y = cur_val
 			end)
-			
+
 			-- HP 업데이트 콜백
 			callbacks:listen(player, "hp", function(cur_val, prev_val)
 				player_state.hp = cur_val
 				msg.post(hp_bar_url, "update_hp", { hp = player_state.hp })
-				
+
 				if player_state.hp > 0 and player_state.hp < 100 then
 					msg.post(sprite_id, "explode")
 				elseif player_state.hp == 100 then
 					msg.post(sprite_id, "explode_reset")
 				end
 			end)
-			
+
 			-- 점수 업데이트 콜백
 			callbacks:listen(player, "point", function(cur_val, prev_val)
 				player_state.point = cur_val
 				msg.post("gui#gui", "point_update", { point = player_state.point })
-				msg.post("gui#gui", "online_player_update", { 
-					player_id = session_id, 
-					name = player.username, 
-					point = player_state.point, 
+				msg.post("gui#gui", "online_player_update", {
+					player_id = session_id,
+					name = player.username,
+					point = player_state.point,
 					color = player.color,
 					score = player.score
 				})
 			end)
-
 		end
 	end)
 end
@@ -112,30 +111,30 @@ local function handle_touch_input(action)
 	local world_pos = camera.screen_to_world(nil, screen_pos)
 	local obj_pos = go.get_position()
 	local dir = vmath.normalize(world_pos - obj_pos)
-	
+
 	target_dir = dir
-	
+
 	if room then
 		-- 이동 명령 전송
 		room:send("move", { x = dir.x, y = dir.y })
-		
+
 		-- 총알 발사
 		local cur_pos = go.get_position()
 		room:send("shoot_bullet", {
-			x = cur_pos.x, 
-			y = cur_pos.y, 
-			dirx = dir.x, 
-			diry = dir.y, 
-			power = 20, 
-			velocity = 10, 
-			owner_id = room.session_id, 
-			type = "player_bullet" 
+			x = cur_pos.x,
+			y = cur_pos.y,
+			dirx = dir.x,
+			diry = dir.y,
+			power = 20,
+			velocity = 10,
+			owner_id = room.session_id,
+			type = "player_bullet"
 		})
-		
+
 		-- NPC 스폰
 		room:send("spawn_npc")
 	end
-	
+
 	return true
 end
 
@@ -145,7 +144,7 @@ local function update_movement(dt)
 		local current_pos = go.get_position()
 		local new_pos = vmath.lerp(0.1, current_pos, target_pos) -- 부드럽게 이동
 		go.set_position(new_pos)
-		
+
 		-- 목표 각도 계산
 		local target_angle = math.atan2(target_dir.y, target_dir.x) - math.pi / 2
 		current_angle = angle_lerp(current_angle, target_angle, 0.15) -- 0.1~0.2 정도가 자연스러움
@@ -165,15 +164,15 @@ end
 
 function init(self)
 	msg.post(".", "acquire_input_focus") -- 입력 포커스 획득
-	hp_bar_url = msg.url("#hp_bar")    -- 현재 게임 오브젝트의 hp_bar 컴포넌트 URL 저장
-	
+	hp_bar_url = msg.url("#hp_bar")     -- 현재 게임 오브젝트의 hp_bar 컴포넌트 URL 저장
+
 	-- 스프라이트 생성 및 설정
 	sprite_id = factory.create("#airplane_factory", vmath.vector3(0, 0, 0))
 	go.set_parent(sprite_id, go.get_id(), false) -- false = 상대좌표 유지
 	go.set_rotation(vmath.quat_rotation_z(current_angle), sprite_id)
-	
+
 	msg.post(msg.url("#sprite"), "disable")
-	
+
 	-- 크기 애니메이션 설정
 	go.set_scale(0.1, sprite_id) -- 초기 크기를 0으로 설정
 	go.animate(sprite_id, "scale", go.PLAYBACK_ONCE_FORWARD, 1, go.EASING_LINEAR, 1)
@@ -182,7 +181,7 @@ end
 function update(self, dt)
 	update_movement(dt)
 	check_and_setup_network()
-	
+
 	-- 플레이어 위치 업데이트 메시지 전송
 	local pos = go.get_position()
 	msg.post("#hp_bar", "update_player_position", { x = pos.x, y = pos.y, z = pos.z })
@@ -198,6 +197,6 @@ function on_input(self, action_id, action)
 	if action_id == hash("touch") and action.pressed then
 		return handle_touch_input(action)
 	end
-	
+
 	return false
 end

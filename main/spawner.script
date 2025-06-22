@@ -43,7 +43,6 @@ local function return_object_to_pool(self, obj, object_type)
 		else
 			-- 풀이 가득 찬 경우 객체 삭제
 			go.delete(obj)
-			print(object_type .. " to remove !!!!!! ---> ", obj)
 		end
 	end
 end

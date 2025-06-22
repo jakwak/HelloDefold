@@ -156,8 +156,6 @@ function on_message(self, message_id, message, sender)
 			gui.set_size(node, vmath.vector3(200, 30, 0))
 			gui.set_scale(node, vmath.vector3(0.7, 0.7, 0.7))
 			player_nodes[id] = node
-
-			print("new player---> ", id, name, point, score)
 		end
 		
 		-- 점수 기준으로 정렬하고 재배치
