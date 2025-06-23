@@ -13,6 +13,9 @@ images {
 images {
   image: "/main/assets/missile.png"
 }
+images {
+  image: "/assets/Platformer Art Complete Pack/Base pack/Items/star.png"
+}
 animations {
   id: "default"
   images {

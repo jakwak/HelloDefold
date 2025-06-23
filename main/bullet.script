@@ -30,6 +30,9 @@ function on_message(self, message_id, message, sender)
 			self.target_pos.y = message.y
 		end
 	end
+	if message_id == hash("disable") then
+		msg.post("#sprite", "disable")
+	end
 end
 
 function on_reload(self)
