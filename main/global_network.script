@@ -164,17 +164,20 @@ function on_message(self, message_id, message, sender)
   elseif msg_hash == hash(NetworkConfig.MESSAGE_TYPES.REQUEST_DEBUG_BODIES) then
     -- 디버그 바디 정보 요청
     if _G.network_room and _G.network_connected then
-      _G.network_room:send("get_debug_bodies", {})
+      local host, _, _ = get_html5_hostname()
+      if host ~= "gxg.kro.kr" then
+        _G.network_room:send("get_debug_bodies", {})
+      end
     else
       print("네트워크에 연결되지 않음 - 디버그 바디 요청 무시")
     end
-  elseif msg_hash == hash(NetworkConfig.MESSAGE_TYPES.UPDATE_PAD_POSITION) then
-    -- 패드 위치 업데이트
-    if _G.network_room and _G.network_connected then
-      _G.network_room:send("pad_position", message)
-    else
-      print("네트워크에 연결되지 않음 - 패드 위치 업데이트 무시")
-    end
+  -- elseif msg_hash == hash(NetworkConfig.MESSAGE_TYPES.UPDATE_PAD_POSITION) then
+  --   -- 패드 위치 업데이트
+  --   if _G.network_room and _G.network_connected then
+  --     _G.network_room:send("pad_position", message)
+  --   else
+  --     print("네트워크에 연결되지 않음 - 패드 위치 업데이트 무시")
+  --   end
   elseif msg_hash == hash(NetworkConfig.MESSAGE_TYPES.GET_NETWORK_STATE) then
     -- 네트워크 상태 요청에 응답
     msg.post(sender, "network_state_response", {

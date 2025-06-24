@@ -79,8 +79,16 @@ embedded_instances {
   ""
 }
 embedded_instances {
-  id: "bg_image"
-  data: ""
+  id: "bg"
+  data: "components {\n"
+  "  id: \"background1\"\n"
+  "  component: \"/main/assets/background1.tilemap\"\n"
+  "}\n"
+  "components {\n"
+  "  id: \"background2\"\n"
+  "  component: \"/main/assets/background2.tilemap\"\n"
+  "}\n"
+  ""
   position {
     z: -1.0
   }

@@ -1,0 +1,71 @@
+tile_set: "/main/assets/background1.tilesource"
+layers {
+  id: "bg1"
+  z: 0.0
+  cell {
+    x: 6
+    y: 0
+    tile: 0
+  }
+  cell {
+    x: 1
+    y: 1
+    tile: 0
+  }
+  cell {
+    x: 4
+    y: 2
+    tile: 0
+  }
+  cell {
+    x: 7
+    y: 2
+    tile: 0
+  }
+  cell {
+    x: 6
+    y: 4
+    tile: 0
+  }
+  cell {
+    x: 5
+    y: 5
+    tile: 0
+  }
+  cell {
+    x: 0
+    y: 6
+    tile: 0
+  }
+  cell {
+    x: 2
+    y: 6
+    tile: 0
+  }
+  cell {
+    x: 7
+    y: 7
+    tile: 0
+  }
+  cell {
+    x: 1
+    y: 8
+    tile: 0
+  }
+  cell {
+    x: 5
+    y: 8
+    tile: 0
+  }
+  cell {
+    x: 0
+    y: 10
+    tile: 0
+  }
+  cell {
+    x: 7
+    y: 10
+    tile: 0
+  }
+}
+material: "/builtins/materials/tile_map.material"

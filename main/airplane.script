@@ -67,7 +67,6 @@ function on_message(self, message_id, message, sender)
 		local explode_id = table.remove(self.explosion_objects, 1)
 		if explode_id then
 			go.delete(explode_id)
-			print("explode_minus !!!!")
 		end
 	end
 end

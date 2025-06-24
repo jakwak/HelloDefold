@@ -27,25 +27,24 @@ local function return_object_to_pool(self, obj, object_type)
 		local pool = object_type == "missile" and self.missile_pool or self.bullet_pool
 		local max_size = object_type == "missile" and MAX_MISSILE_POOL_SIZE or MAX_BULLET_POOL_SIZE
 
-		msg.post(obj, "disable")
-
-		timer.delay(0.1, false, function()
-			if not go.exists(obj) then return end			
-			-- 풀 크기 제한 확인
-			if #pool < max_size then
-				table.insert(pool, obj)
-			else
-				-- 풀이 가득 찬 경우 객체 삭제
-				go.delete(obj, true)
-			end
-		end)
+		if not go.exists(obj) then return end
+		-- 풀 크기 제한 확인
+		if #pool < max_size then
+			table.insert(pool, obj)
+		else
+			-- 풀이 가득 찬 경우 객체 삭제
+			go.delete(obj, true)
+		end
 	end
 end
 
 -- 안전한 정리 함수
 local function safe_cleanup_object(self, id, obj, is_missile)
 	if obj and go.exists(obj) then
-		timer.delay(0.1, false, function()
+
+		msg.post(obj, "disable")
+		
+		timer.delay(0, false, function()
 			if is_missile then
 				return_object_to_pool(self, obj, "missile")
 			else
