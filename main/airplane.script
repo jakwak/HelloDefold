@@ -15,7 +15,6 @@ local function clear_all_explosions(self)
 			end
 		end
 		self.explosion_objects = {}
-		print("모든 폭발 효과 객체가 삭제되었습니다.")
 	end
 end
 
@@ -62,6 +61,14 @@ function on_message(self, message_id, message, sender)
 	if message_id == hash("explode_reset") then
 		-- 모든 폭발 효과 객체 삭제
 		clear_all_explosions(self)
+	end
+	if message_id == hash("explode_minus") then
+		-- explosion_objects 에서 1개 삭제
+		local explode_id = table.remove(self.explosion_objects, 1)
+		if explode_id then
+			go.delete(explode_id)
+			print("explode_minus !!!!")
+		end
 	end
 end
 

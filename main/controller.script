@@ -82,10 +82,12 @@ local function setup_network_callbacks(room)
 				player_state.hp = cur_val
 				msg.post(hp_bar_url, "update_hp", { hp = player_state.hp })
 
-				if player_state.hp > 0 and player_state.hp < 100 then
+				if player_state.hp > 0 and player_state.hp < 100 and prev_val > cur_val then
 					msg.post(sprite_id, "explode")
 				elseif player_state.hp == 100 then
 					msg.post(sprite_id, "explode_reset")
+				elseif prev_val < cur_val then
+					msg.post(sprite_id, "explode_minus")
 				end
 			end)
 

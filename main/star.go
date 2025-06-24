@@ -1,3 +1,7 @@
+components {
+  id: "star"
+  component: "/main/star.script"
+}
 embedded_components {
   id: "sprite"
   type: "sprite"

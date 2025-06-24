@@ -3,14 +3,14 @@ local camera                = require "orthographic.camera"
 local utils                 = require "main.utils"
 local room                  = nil
 
-local MAX_BULLET_POOL_SIZE  = 50
-local MAX_MISSILE_POOL_SIZE = 20
+local MAX_BULLET_POOL_SIZE  = 10
+local MAX_MISSILE_POOL_SIZE = 5
 
 -- 통합된 풀에서 객체 가져오기 함수
 local function get_object_from_pool(self, object_type)
 	local pool = object_type == "missile" and self.missile_pool or self.bullet_pool
 	local factory_url = object_type == "missile" and self.missile_factory_url or self.bullet_factory_url
-	
+
 	if #pool > 0 then
 		local obj = table.remove(pool)
 		msg.post(obj, "enable")
@@ -26,26 +26,19 @@ local function return_object_to_pool(self, obj, object_type)
 	if go.exists(obj) then
 		local pool = object_type == "missile" and self.missile_pool or self.bullet_pool
 		local max_size = object_type == "missile" and MAX_MISSILE_POOL_SIZE or MAX_BULLET_POOL_SIZE
-		
-		-- 미사일은 즉시 비활성화, 총알은 지연 후 비활성화
-		-- if object_type == "missile" then
 
 		msg.post(obj, "disable")
 
-		-- else
-		-- 	timer.delay(0.1, false, function()
-		-- 		if not go.exists(obj) then return end
-		-- 		msg.post(obj, "disable")
-		-- 	end)
-		-- end
-
-		-- 풀 크기 제한 확인
-		if #pool < max_size then
-			table.insert(pool, obj)
-		else
-			-- 풀이 가득 찬 경우 객체 삭제
-			go.delete(obj, true)
-		end
+		timer.delay(0.1, false, function()
+			if not go.exists(obj) then return end			
+			-- 풀 크기 제한 확인
+			if #pool < max_size then
+				table.insert(pool, obj)
+			else
+				-- 풀이 가득 찬 경우 객체 삭제
+				go.delete(obj, true)
+			end
+		end)
 	end
 end
 

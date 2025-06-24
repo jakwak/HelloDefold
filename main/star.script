@@ -1,0 +1,56 @@
+function init(self)
+	-- 애니메이션 관련 변수들
+	self.animation_timer = 0
+	self.animation_duration = 3 -- 1.5초 간격
+	self.min_scale = 0.5         -- 최소 크기 (0.5배)
+	self.max_scale = 1.5         -- 최대 크기 (1.0배)
+	self.is_growing = true       -- 현재 커지는 중인지 여부
+
+	-- 초기 크기 설정
+	go.set_scale(vmath.vector3(self.min_scale, self.min_scale, 1))
+end
+
+function final(self)
+	-- 정리 코드
+end
+
+function update(self, dt)
+	-- 애니메이션 타이머 업데이트
+	self.animation_timer = self.animation_timer + dt
+
+	-- 사인 함수를 사용한 부드러운 애니메이션
+	local sine_value = math.sin(self.animation_timer * math.pi * 2) -- 2π = 1초 주기
+	local scale_range = (self.max_scale - self.min_scale) / 2
+	local scale_center = (self.max_scale + self.min_scale) / 2
+	local current_scale = scale_center + sine_value * scale_range
+
+	-- 크기 적용
+	go.set_scale(vmath.vector3(current_scale, current_scale, 1))
+
+	-- 타이머 리셋 (1초마다)
+	if self.animation_timer >= self.animation_duration then
+		self.animation_timer = 0
+	end
+end
+
+function fixed_update(self, dt)
+	-- 물리 업데이트가 필요한 경우 여기에 코드 추가
+end
+
+function on_message(self, message_id, message, sender)
+	-- 메시지 처리
+	if message_id == hash("set_star_info") then
+		-- 별 정보 설정 (필요한 경우)
+		if message.x and message.y then
+			go.set_position(vmath.vector3(message.x, message.y, 0))
+		end
+	end
+end
+
+function on_input(self, action_id, action)
+	-- 입력 처리 (필요한 경우)
+end
+
+function on_reload(self)
+	-- 핫 리로드 처리
+end
