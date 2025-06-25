@@ -134,7 +134,7 @@ local function handle_touch_input(action)
 		})
 
 		-- NPC 스폰
-		room:send("spawn_npc")
+		-- room:send("spawn_npc")
 	end
 
 	return true
