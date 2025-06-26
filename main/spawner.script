@@ -106,6 +106,10 @@ local function on_add_player(self, player, session_id, callbacks)
 end
 
 local function on_add_npc(self, npc, _, callbacks)
+	if self.spawned_objects[npc.id] then
+		return
+	end
+
 	local obj = factory.create(self.npc_factory_url, vmath.vector3(npc.x, npc.y, 0))
 	self.spawned_objects[npc.id] = obj
 	msg.post(obj, "set_npc_info", { id = npc.id, size = npc.size, color = npc.color, type = npc.type })
@@ -127,6 +131,7 @@ local function on_add_npc(self, npc, _, callbacks)
 		msg.post(obj, "set_npc_info", { hp = cur_val })
 	end)
 
+	print("npc_add---->", npc.id)
 	msg.post("gui#gui", "npc_add")
 end
 
