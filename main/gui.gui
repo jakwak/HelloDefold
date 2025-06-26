@@ -3,6 +3,10 @@ fonts {
   name: "korean"
   font: "/assets/fonts/korean.font"
 }
+fonts {
+  name: "hud"
+  font: "/main/assets/fonts/hud.font"
+}
 textures {
   name: "airplane"
   texture: "/main/assets/airplane.atlas"
