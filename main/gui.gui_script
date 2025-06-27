@@ -90,8 +90,9 @@ local function sort_and_arrange_players()
 		local id = player_data.id
 		local node = player_nodes[id]
 		if node then
-			local y = 400 - 30 * (i - 1)
-			gui.set_position(node, vmath.vector3(30, y, 0))
+			local x = gui.get_width() - 30
+			local y = gui.get_height() * 0.8 - 30 * (i - 1)
+			gui.set_position(node, vmath.vector3(x, y, 0))
 			
 			-- 순위와 함께 텍스트 업데이트
 			local rank_text = string.format("%d등 %s %d %d", i, player_data.name, player_data.point, player_data.score or 0)
@@ -151,7 +152,7 @@ function on_message(self, message_id, message, sender)
 			-- color를 vector4로 변환
 			local color_v4 = utils.hex_to_v4(tostring(color))
 			gui.set_color(node, color_v4)
-			gui.set_pivot(node, gui.PIVOT_NW)
+			gui.set_pivot(node, gui.PIVOT_NE)
 			gui.set_font(node, "korean")
 			gui.set_size(node, vmath.vector3(200, 30, 0))
 			gui.set_scale(node, vmath.vector3(0.7, 0.7, 0.7))

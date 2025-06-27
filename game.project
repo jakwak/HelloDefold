@@ -50,8 +50,8 @@ clear_color_green = 0.7
 clear_color_blue = 1.0
 
 [display]
-width = 1024
-height = 640
+width = 1920
+height = 1080
 
 [factory]
 max_count = 512

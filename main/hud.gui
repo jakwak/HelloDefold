@@ -1,0 +1,32 @@
+script: "/main/hud.gui_script"
+fonts {
+  name: "hud"
+  font: "/main/assets/fonts/hud.font"
+}
+textures {
+  name: "star"
+  texture: "/main/assets/star.atlas"
+}
+nodes {
+  position {
+    x: 988.0
+    y: 976.0
+  }
+  scale {
+    x: 1.4
+    y: 1.4
+  }
+  size {
+    x: 225.0
+    y: 35.0
+  }
+  type: TYPE_TEXT
+  text: "0P"
+  font: "hud"
+  id: "score"
+  inherit_alpha: true
+  outline_alpha: 0.0
+  shadow_alpha: 0.0
+}
+material: "/builtins/materials/gui.material"
+adjust_reference: ADJUST_REFERENCE_PARENT

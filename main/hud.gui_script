@@ -1,5 +1,5 @@
 -- how fast the score counts up per second
-local score_inc_speed = 1000
+local score_inc_speed = 10
 
 function init(self)
 	-- the target score is the current score in the game
