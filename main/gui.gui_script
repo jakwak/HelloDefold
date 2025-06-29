@@ -155,7 +155,7 @@ function on_message(self, message_id, message, sender)
 			gui.set_pivot(node, gui.PIVOT_NE)
 			gui.set_font(node, "korean")
 			gui.set_size(node, vmath.vector3(200, 30, 0))
-			gui.set_scale(node, vmath.vector3(0.7, 0.7, 0.7))
+			-- gui.set_scale(node, vmath.vector3(0.7, 0.7, 0.7))
 			player_nodes[id] = node
 		end
 		

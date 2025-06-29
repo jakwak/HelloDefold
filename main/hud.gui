@@ -3,6 +3,10 @@ fonts {
   name: "hud"
   font: "/main/assets/fonts/hud.font"
 }
+fonts {
+  name: "aaa"
+  font: "/main/assets/fonts/aaa.font"
+}
 textures {
   name: "star"
   texture: "/main/assets/star.atlas"

@@ -1,4 +1,5 @@
 local utils = require "main.utils"
+local camera = require "orthographic.camera"
 
 local function init_fadein(self)
 	self.spawn_time = 0
@@ -128,13 +129,19 @@ function on_message(self, message_id, message, sender)
 		end
 		if message.hp then
 			self.hp = message.hp
+			local curPos = go.get_position()
+			local screenPos = camera.world_to_screen(nil, curPos)
 			if self.type == "leader" and self.hp > 0 and self.hp < 100 then
 				msg.post(self.sprite_id, "explode")
-				spawn_floating_text(go.get_position().x, go.get_position().y, 10)
+				-- spawn_floating_text(curPos.x, curPos.y, 10)
+
+				-- msg.post("gui#hud", "add_score", { amount = 10, position = screenPos })
 			end
 			if self.type == "follower" and self.hp > 0 and self.hp < 50 then
 				msg.post(self.sprite_id, "explode")
-				spawn_floating_text(go.get_position().x, go.get_position().y, 10)
+				-- spawn_floating_text(curPos.x, curPos.y, 10)
+
+				-- msg.post("gui#hud", "add_score", { amount = 10, position = screenPos })
 			end
 		end
 	end
@@ -145,7 +152,11 @@ function on_message(self, message_id, message, sender)
 		particlefx.play("#explode2")
 		msg.post(self.sprite_id, "explode_npc")
 
-		spawn_floating_text(go.get_position().x, go.get_position().y, 50)
+		-- spawn_floating_text(go.get_position().x, go.get_position().y, 50)
+
+		local curPos = go.get_position()
+		local screenPos = camera.world_to_screen(nil, curPos)
+		-- msg.post("gui#hud", "add_score", { amount = 50, position = screenPos })
 
 		-- msg.post(msg.url("#sprite"), "enable")
 		go.animate(self.sprite_id, "scale", go.PLAYBACK_ONCE_FORWARD, 0.1, go.EASING_LINEAR, 2)

@@ -1,5 +1,5 @@
 -- how fast the score counts up per second
-local score_inc_speed = 10
+local score_inc_speed = 100
 
 function init(self)
 	-- the target score is the current score in the game
@@ -10,6 +10,10 @@ function init(self)
 	self.displayed_score = 0
 	-- keep a reference to the node displaying the score for later use below
 	self.score_node = gui.get_node("score")
+	
+	-- 시작 후 1초 동안 메시지 무시를 위한 타이머
+	self.start_timer = 0
+	self.ready_to_receive_messages = false
 end
 
 local function delete_star(self, star)
@@ -55,6 +59,16 @@ local function spawn_stars(self, amount)
 end
 
 function update(self, dt)
+	-- 시작 후 1초 대기
+	if not self.ready_to_receive_messages then
+		self.start_timer = self.start_timer + dt
+		if self.start_timer >= 3.0 then
+			self.ready_to_receive_messages = true
+			print("HUD: 메시지 수신 준비 완료")
+		end
+		return
+	end
+	
 	-- check if the score needs to be updated
 	if self.current_score < self.target_score then
 		-- increment the score for this timestep to grow towards the target score
@@ -70,13 +84,13 @@ function update(self, dt)
 			-- update the text of the score node
 			gui.set_text(self.score_node, string.format("%d P", self.displayed_score))
 			-- set the scale of the score node to be slightly bigger than normal
-			local s = 1.3
+			local s = 1.8
 			gui.set_scale(self.score_node, vmath.vector3(s, s, s))
 			-- then animate the scale back to the original value
-			s = 1.0
-			gui.animate(self.score_node, gui.PROP_SCALE, vmath.vector3(s, s, s), gui.EASING_OUT, 0.2)
+			s = 1.3
+			gui.animate(self.score_node, gui.PROP_SCALE, vmath.vector3(s, s, s), gui.EASING_OUT, 0.4)
 			-- spawn stars
-			spawn_stars(self, 4)
+			spawn_stars(self, 1)
 		end
 	end
 end
@@ -93,7 +107,7 @@ end
 
 -- this function animates the node from having floated first to swoosh away towards the displayed total score
 local function float_done(self, node)
-	local duration = 0.2
+	local duration = 0.3
 	-- swoosh away towards the displayed score
 	gui.animate(node, gui.PROP_POSITION, gui.get_position(self.score_node), gui.EASING_IN, duration, 0.0, swoosh_done)
 	-- also fade out partially during the swoosh
@@ -101,12 +115,20 @@ local function float_done(self, node)
 end
 
 function on_message(self, message_id, message, sender)
+	-- 시작 후 1초가 지나지 않았으면 메시지 무시
+	if not self.ready_to_receive_messages then
+		print("HUD: 아직 준비되지 않음, 메시지 무시:", message_id)
+		return
+	end
+	
 	-- register added score, this message could be sent by anyone wanting to increment the score
 	if message_id == hash("add_score") then
 		-- create a new temporary score node
-		local node = gui.new_text_node(message.position, tostring(message.amount))
+		local node = gui.new_text_node(message.position, tostring("+" .. message.amount))
 		-- use the small font for it
-		gui.set_font(node, "hud")
+		gui.set_font(node, "aaa")
+		gui.set_scale(node, vmath.vector3(1.5, 1.5, 1.5))
+		
 		-- initially transparent
 		gui.set_color(node, vmath.vector4(1, 1, 1, 0))
 		gui.set_outline(node, vmath.vector4(0, 0, 0, 0))
@@ -114,7 +136,20 @@ function on_message(self, message_id, message, sender)
 		gui.animate(node, gui.PROP_COLOR, vmath.vector4(1, 1, 1, 1), gui.EASING_OUT, 0.3)
 		gui.animate(node, gui.PROP_OUTLINE, vmath.vector4(0, 0, 0, 1), gui.EASING_OUT, 0.3)
 		-- float
-		local offset = vmath.vector3(0, 20, 0)
-		gui.animate(node, gui.PROP_POSITION, gui.get_position(node) + offset, gui.EASING_NONE, 0.5, 0.0, float_done)
+		local offset = vmath.vector3(0, 30, 0)
+		gui.animate(node, gui.PROP_POSITION, gui.get_position(node) + offset, gui.EASING_NONE, 0.3, 0.0, float_done)
+	
+	-- 점수를 0으로 리셋하는 메시지
+	elseif message_id == hash("point_reset") then
+		-- 모든 점수 관련 변수를 0으로 리셋
+		self.target_score = 0
+		self.current_score = 0
+		self.displayed_score = 0
+		
+		-- 화면에 표시되는 점수 텍스트를 0으로 업데이트
+		gui.set_text(self.score_node, "0 P")
+		
+		-- 점수 노드의 스케일을 원래 크기로 리셋
+		gui.set_scale(self.score_node, vmath.vector3(1, 1, 1))
 	end
 end
