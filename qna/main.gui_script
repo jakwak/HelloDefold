@@ -1,0 +1,150 @@
+function init(self)
+	msg.post(".", "acquire_input_focus")
+	
+	-- 화면 크기 가져오기 (기본값 설정)
+	local screen_width = gui.get_width()
+	local screen_height = gui.get_height()
+	
+	-- 실제 화면 크기 확인 시도
+	if sys.get_config then
+		screen_width = tonumber(sys.get_config("display.width")) or 1280
+		screen_height = tonumber(sys.get_config("display.height")) or 720
+	end
+	
+	-- 정사각형 크기 계산 (화면의 80% 크기로 증가)
+	local square_size = math.min(screen_width, screen_height) * 0.8
+	
+	-- 버튼 간격 설정 (정사각형 크기의 20%로 증가)
+	local gap = square_size * 0.2
+	
+	-- 정사각형을 화면 중앙에 배치하기 위한 위치 계산
+	local center_x = screen_width / 2
+	local center_y = screen_height / 2
+	
+	-- 각 버튼의 크기 (간격을 고려하여 계산)
+	local button_size = (square_size - gap) / 2
+	
+	-- 정사각형의 왼쪽 상단 모서리 위치
+	local square_left = center_x - square_size / 2
+	local square_top = center_y + square_size / 2
+	
+	-- 각 버튼의 위치 계산 (2x2 그리드, 간격 포함)
+	local positions = {
+		{x = square_left + button_size/2, y = square_top - button_size/2},                    -- 버튼 1 (좌상)
+		{x = square_left + button_size*1.5 + gap, y = square_top - button_size/2},            -- 버튼 2 (우상)
+		{x = square_left + button_size/2, y = square_top - button_size*1.5 - gap},            -- 버튼 3 (좌하)
+		{x = square_left + button_size*1.5 + gap, y = square_top - button_size*1.5 - gap}     -- 버튼 4 (우하)
+	}
+	
+	-- 각 버튼 설정
+	for i = 1, 4 do
+		local button_node = gui.get_node("button" .. i)
+		local text_node = gui.get_node("text" .. i)
+		
+		-- 버튼 위치와 크기 설정 (정사각형)
+		gui.set_position(button_node, vmath.vector3(positions[i].x, positions[i].y, 0))
+		gui.set_size(button_node, vmath.vector3(button_size, button_size, 0))
+		
+		-- 버튼 배경색을 흰색으로 설정 (처음에는 투명하게)
+		gui.set_color(button_node, vmath.vector4(1, 1, 1, 0))
+		
+		-- 텍스트 색상을 검은색으로 설정 (처음에는 투명하게)
+		gui.set_color(text_node, vmath.vector4(0, 0, 0, 0))
+		
+		-- 텍스트 크기를 버튼 크기에 맞게 설정 (더 크게)
+		local text_scale = button_size / 30
+		gui.set_scale(text_node, vmath.vector3(text_scale, text_scale, 1))
+		
+		-- 텍스트를 버튼 중앙에 정확히 배치
+		gui.set_position(text_node, vmath.vector3(0, 0, 0))
+		
+		-- 버튼과 텍스트를 보이게 설정
+		gui.set_enabled(button_node, true)
+		gui.set_enabled(text_node, true)
+	end
+	
+	-- 페이드-인 애니메이션 시작
+	start_fade_in_animation(self)
+	
+	print("GUI initialized with square layout: " .. screen_width .. "x" .. screen_height .. ", square size: " .. square_size .. ", gap: " .. gap .. ", button size: " .. button_size)
+end
+
+-- 페이드-인 애니메이션 함수
+function start_fade_in_animation(self)
+	-- 각 버튼을 순차적으로 페이드-인
+	local fade_duration = 1  -- 페이드-인 지속 시간
+	local delay_between = 0.5  -- 버튼 간 지연 시간
+	
+	for i = 1, 4 do
+		local button_node = gui.get_node("button" .. i)
+		local text_node = gui.get_node("text" .. i)
+		
+		-- 버튼 페이드-인 애니메이션
+		gui.animate(button_node, gui.PROP_COLOR, vmath.vector4(1, 1, 1, 1), gui.EASING_OUTQUAD, fade_duration, (i-1) * delay_between)
+		
+		-- 텍스트 페이드-인 애니메이션 (버튼보다 약간 늦게)
+		gui.animate(text_node, gui.PROP_COLOR, vmath.vector4(0, 0, 0, 1), gui.EASING_OUTQUAD, fade_duration, (i-1) * delay_between + 0.1)
+	end
+end
+
+function final(self)
+	-- 정리 코드
+end
+
+function update(self, dt)
+	-- 업데이트 코드 (필요시)
+end
+
+function on_message(self, message_id, message, sender)
+	-- 메시지 처리 코드 (필요시)
+end
+
+function on_input(self, action_id, action)
+	if action_id == hash("touch") and action.pressed then
+		local button1 = gui.get_node("button1")
+		local button2 = gui.get_node("button2")
+		local button3 = gui.get_node("button3")
+		local button4 = gui.get_node("button4")
+		
+		if gui.pick_node(button1, action.x, action.y) then
+			print("Button 1 pressed!")
+			-- 모든 버튼 페이드-아웃
+			fade_out_all_buttons(self)
+			
+		elseif gui.pick_node(button2, action.x, action.y) then
+			print("Button 2 pressed!")
+			-- 모든 버튼 페이드-아웃
+			fade_out_all_buttons(self)
+			
+		elseif gui.pick_node(button3, action.x, action.y) then
+			print("Button 3 pressed!")
+			-- 모든 버튼 페이드-아웃
+			fade_out_all_buttons(self)
+			
+		elseif gui.pick_node(button4, action.x, action.y) then
+			print("Button 4 pressed!")
+			-- 모든 버튼 페이드-아웃
+			fade_out_all_buttons(self)
+		end
+	end
+end
+
+-- 모든 버튼 페이드-아웃 함수
+function fade_out_all_buttons(self)
+	local fade_duration = 1.0  -- 1초간 페이드-아웃
+	
+	for i = 1, 4 do
+		local button_node = gui.get_node("button" .. i)
+		local text_node = gui.get_node("text" .. i)
+		
+		-- 버튼 페이드-아웃
+		gui.animate(button_node, gui.PROP_COLOR, vmath.vector4(1, 1, 1, 0), gui.EASING_INQUAD, fade_duration)
+		
+		-- 텍스트 페이드-아웃
+		gui.animate(text_node, gui.PROP_COLOR, vmath.vector4(0, 0, 0, 0), gui.EASING_INQUAD, fade_duration)
+	end
+end
+
+function on_reload(self)
+	-- 리로드 처리 코드 (필요시)
+end
