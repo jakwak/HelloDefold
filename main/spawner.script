@@ -197,6 +197,7 @@ end
 local function on_remove_player(self, _, session_id)
 	local obj = self.spawned_objects[session_id]
 	if not obj or self.removing_objects[session_id] then
+		print("player already remove---->", session_id)
 		return
 	end
 
