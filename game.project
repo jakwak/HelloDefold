@@ -1,5 +1,5 @@
 [bootstrap]
-main_collection = /qna/main.collectionc
+main_collection = /main/main.collectionc
 render = /orthographic/render/orthographic.renderc
 
 [script]
